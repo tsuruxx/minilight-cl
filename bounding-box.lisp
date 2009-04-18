@@ -12,29 +12,32 @@
 		   :lx lx :ly ly :lz lz
 		   :hx hx :hy hy :hz hz)))
 
-(defmethod subdivide ((box aa-bbox))
-  (with-slots (lx ly lz hx hy hz) box
-    (macrolet ((lxor (a b)
-		;; needed a logical xor :(
-		(let ((aval (gensym))
-		      (bval (gensym)))
-		  `(let ((,aval ,a)
-			 (,bval ,b))
-		     (and (or ,bval ,aval)
-			  (not (and ,bval ,aval)))))))
-      (multiple-value-bind (mid-x mid-y mid-z)
-	  (center box)
-	(loop :for s :below 8 :collect
-	   (apply #'make-aa-box
-		  (loop :for j :below 6
-		     :for m = (mod j 3) :collect
-		     (if (lxor (not (zerop
-				     (boole boole-and
-					    (ash s (- m)) 1)))
-			       (> j 2))
-			 (* (+ (aref bound m)
-			       (aref bound (+ m 3))) 0.5)
-			 (aref bound j)))))))))
+;; (defmethod subdivide ((box aa-bbox))
+;;   (with-slots (lx ly lz hx hy hz) box
+;;     (macrolet ((lxor (a b)
+;; 		;; needed a logical xor :(
+;; 		(let ((aval (gensym))
+;; 		      (bval (gensym)))
+;; 		  `(let ((,aval ,a)
+;; 			 (,bval ,b))
+;; 		     (and (or ,bval ,aval)
+;; 			  (not (and ,bval ,aval)))))))
+     
+
+	
+;;       (loop :for s :below 8 :collect
+;; 	 (apply #'make-aa-box
+;; 		(loop :for j :below 6
+;; 		   :for m = (mod j 3) :collect
+;; 		   (if (lxor (not (zerop
+;; 				   (boole boole-and
+;; 					  (ash s (- m)) 1)))
+;; 			     (> j 2))
+;; 		       (* (+ (aref bound m)
+;; 			     (aref bound (+ m 3))) 0.5)
+;; 		       (aref bound j))))))))
+
+
 (defmethod center ((box aa-box))
   (with-slots (lx ly lz hx hy hz) box
     (let ((mid-x (- hx lx))
@@ -42,6 +45,17 @@
 	  (mid-z (- hz lz)))
       (values (* mid-x 0.5) (* mid-y 0.5) (* mid-z 0.5)))))
 
-(defun subdivide (bound)
-  "Subdivides a BOUND representing an AABB into 8 AABBes"
-  )
+(defmethod subdivide ((box aa-bbox))
+  (with-slots (lx ly lz hx hy hz) box
+    (multiple-value-bind (cx cy cz)
+	(center box)
+      ;; TODO: make generation programmatic
+      (make-array 8 :initial-contents (list (make-aa-bbox lx ly lz cx cy cz)
+					    (make-aa-bbox cx ly lz hx cy cz)
+					    (make-aa-bbox lx cy lz cx hy cz)
+					    (make-aa-bbox cx cy lz hx hy cz)
+					    
+					    (make-aa-bbox lx ly cz cx cy hz)
+					    (make-aa-bbox cx ly cz hx cy hz)
+					    (make-aa-bbox lx cy cz cx hy hz)
+					    (make-aa-bbox cx cy cz hx hy hz))))))
