@@ -92,12 +92,11 @@ with a newline. Eg.:
 	;; render loop
 	(loop for frame-num from 1 to iterations
 	   with last-time = (get-universal-time)
-	   :do (progn
-		 (frame camera scene image)
-		 (let ((new-time (get-universal-time)))
-		   (when (or (< *save-period* (- new-time last-time))
-			     (= frame-num iterations))
-		     (setf last-time new-time)
-		     (save-image t frame-num)))
-		 (format t "iteration: ~a" (frame-num)))
+	   :do (frame camera scene image)
+	   :do (let ((new-time (get-universal-time)))
+		 (when (or (< *save-period* (- new-time last-time))
+			   (= frame-num iterations))
+		   (setf last-time new-time)
+		   (save-image t frame-num)))
+	   :do (format t "iteration: ~a" (frame-num))
 	   :finally (format t "~%finished~&"))))))

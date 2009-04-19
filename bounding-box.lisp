@@ -1,3 +1,5 @@
+(in-package #:minilight)
+
 (defclass aa-bbox ()
   ((lx :initarg :lx :type single-float)
    (ly :initarg :ly :type single-float)

@@ -1,3 +1,5 @@
+(in-package #:minilight)
+
 (defclass ray ()
   ((ox :initarg :ox :type single-float) ;origin
    (oy :initarg :oy :type single-float)

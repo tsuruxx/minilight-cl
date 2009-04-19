@@ -3,8 +3,8 @@
   :version "0.0.1" 
   :serial t
   :components
-  ((:file "minilight")
-   (:file "vector-3d")
+  ((:file "vector-3d")
+   (:file "minilight")
    (:file "bounding-box")
    (:file "triangle")
    (:file "scene")
