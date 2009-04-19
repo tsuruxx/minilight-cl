@@ -54,9 +54,13 @@
   (and (> (length items) +max-levels+)
        (< level (- +max-levels+ 1))))
 
-(defmethod make-spatial-index ((cam camera) items level)
+(defmethod make-spatial-index ((cam camera) items)
   (with-slots ((eye view-position)) cam
-    (let ((new-bound (loop :for item :across items
+    
+    (let* ((eye-x (aref eye 0))
+	   (eye-y (aref eye 1))
+	   (eye-z (aref eye 2))
+	   (new-bound (loop :for item :across items
 			:for x = (bounds item)
 			:minimize (aref x 0) :into a
 			:minimize (aref x 1) :into b
@@ -64,7 +68,10 @@
 			:maximize (aref x 3) :into d
 			:maximize (aref x 4) :into e
 			:maximize (aref x 5) :into f
-			:finally (return (make-aa-box a b c d e f)))))
+			:finally (return (make-aa-box (min eye-x a)
+						      (min eye-y b)
+						      (min eye-z c)
+						      d e f)))))
       (make-spatial-index new-bound items))))
 
 (defun find-bounds (array)
@@ -283,10 +290,9 @@ elements respectively."
   ;; Intersection test between ray and octree
   ;; TODO: determine if a FIND-SUBCELL function is needed. For now, leave out.
   (with-slots (bounds nodes) index
-    (with-slots (origin direction) ray
-      (let ((distance (intersect-p ray bounds)))
-	(when distance
-	  (intersect-p ray nodes))))))
+    (let ((distance (intersect-p ray bounds)))
+      (when distance
+	(intersect-p ray nodes)))))
 
 
 (defmethod intersect-p ((ray slope-ray) (nodes vector))

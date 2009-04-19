@@ -5,6 +5,7 @@
   :components
   ((:file "minilight")
    (:file "vector-3d")
+   (:file "bounding-box")
    (:file "triangle")
    (:file "scene")
    (:file "spatial-index")
