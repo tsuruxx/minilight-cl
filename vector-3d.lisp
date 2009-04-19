@@ -33,7 +33,8 @@
   (:nicknames #:v3d)
   (:use #:common-lisp)
   (:export #:vector3d #:vector4d 
-	   #:vec3-0 #:vec3 #:distance #:vector+ #:vector-
+	   #:vec3-0 #:vec3 #:distance
+	   #:distance^2 #:vector+ #:vector-
 	   #:nvector+ #:nvector- #:vector* #:nvector*
 	   #:cross #:dot #:normalize #:nnormalize
 	   #:mag-sq #:magnitude #:unit-normal-tri #:nunit-normal-tri

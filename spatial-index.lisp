@@ -54,25 +54,7 @@
   (and (> (length items) +max-levels+)
        (< level (- +max-levels+ 1))))
 
-(defmethod make-spatial-index ((cam camera) items)
-  (with-slots ((eye view-position)) cam
-    
-    (let* ((eye-x (aref eye 0))
-	   (eye-y (aref eye 1))
-	   (eye-z (aref eye 2))
-	   (new-bound (loop :for item :across items
-			:for x = (bounds item)
-			:minimize (aref x 0) :into a
-			:minimize (aref x 1) :into b
-			:minimize (aref x 2) :into c
-			:maximize (aref x 3) :into d
-			:maximize (aref x 4) :into e
-			:maximize (aref x 5) :into f
-			:finally (return (make-aa-bbox (min eye-x a)
-						      (min eye-y b)
-						      (min eye-z c)
-						      d e f)))))
-      (make-spatial-index new-bound items))))
+
 
 (defun find-bounds (array)
   (loop for vertex across array
@@ -131,8 +113,26 @@ elements respectively."
 ;; 						       (+ depth 1)))
 ;; 			 list))))
 ;;       (make-octree-node bounds list 0))))
+(defmethod make-spatial-index ((cam camera) items)
+  (with-slots ((eye view-position)) cam
+    (let* ((eye-x (aref eye 0))
+	   (eye-y (aref eye 1))
+	   (eye-z (aref eye 2))
+	   (new-bound (loop :for item :across items
+			:for x = (bounds item)
+			:minimize (aref x 0) :into a
+			:minimize (aref x 1) :into b
+			:minimize (aref x 2) :into c
+			:maximize (aref x 3) :into d
+			:maximize (aref x 4) :into e
+			:maximize (aref x 5) :into f
+			:finally (return (make-aa-bbox (min eye-x a)
+						      (min eye-y b)
+						      (min eye-z c)
+						      d e f)))))
+      (make-spatial-index new-bound items))))
 
-(defun make-spatial-index (bounds nodes)
+(defmethod make-spatial-index ((bounds aa-bbox) nodes)
   (let ((max-depth (- +max-levels+ 1)))
     (labels ((low-tolerance-p (bbox)
 	       (< (- (hx bbox) (lx bbox))

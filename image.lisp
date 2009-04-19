@@ -12,7 +12,7 @@
   ((width :initarg :width :reader width)
    (height :initarg :height :reader height)
    (pixels :initarg :pixels :accessor pixels))
-  (:default-initargs (:pixels (make-array (* width height) :initial-element 0))))
+  (:default-initargs :pixels (make-array (* width height) :initial-element 0)))
 
 (defun make-image (file-stream)
   (flet ((clamp (num low high)

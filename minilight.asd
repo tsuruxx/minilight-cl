@@ -10,6 +10,7 @@
    (:file "scene")
    (:file "image")
    (:file "camera")
+   (:file "ray")
    (:file "spatial-index")
    (:file "surface-point")
    (:file "raytracer")))
