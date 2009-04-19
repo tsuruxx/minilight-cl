@@ -63,8 +63,8 @@
 					   (vector+ view-dir
 						    (vector-s* offset
 							       (tan (* view-ang 0.5)))))
-		  :for ray = (make-ray view-pos sample-direction)
+		  :for ray = (make-slope-ray view-pos sample-direction)
 		  
-		  :for radiance (radiance raytracer ray)
+		  :for radiance = (radiance raytracer ray)
 
 		  :do (add-to-pixel image x y radiance)))))))

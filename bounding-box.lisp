@@ -40,7 +40,7 @@
 ;; 		       (aref bound j))))))))
 
 
-(defmethod center ((box aa-box))
+(defmethod center ((box aa-bbox))
   (with-slots (lx ly lz hx hy hz) box
     (let ((mid-x (- hx lx))
 	  (mid-y (- hy ly))

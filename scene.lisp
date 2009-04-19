@@ -19,7 +19,7 @@
    (spacial-index    :accessor space-idx
 		     :initargs :space-idx)
    
-   (sky-emission     :acccessor sky-emission
+   (sky-emission     :accessor sky-emission
 		     :initargs :sky-emission
 		     :type v3d:vector3d)
    
@@ -28,7 +28,7 @@
 		     :type v3d:vector3d)))
 
 (defmethod make-initialize-instance :after
-    ((scene scene) &keys mesh &allow-other-keys)
+    ((scene scene) &key mesh &allow-other-keys)
   (with-slots (emitters spatial-index) scene
     (setf emitters
 	  (loop :for i :below (length mesh)
@@ -56,7 +56,7 @@
 (defgeneric emitters-count (scene))
 (defgeneric default-emission (scene back-direction))
 
-(defmethod intersect-p ((ray obj) (scene scene))
+(defmethod intersect-p ((ray ray) (scene scene))
   (intersect-p ray (spacial-idx scene)))
 
 (defmethod emitter ((scene scene))

@@ -21,17 +21,17 @@
 	      :initarg :emitivity
 	      :type v3d:vector3d)))
 
-(defclass ray ()
-  ((origin :accessor origin
-	   :initarg :origin
-	   :type v3d:vector3d)
+;; (defclass ray ()
+;;   ((origin :accessor origin
+;; 	   :initarg :origin
+;; 	   :type v3d:vector3d)
    
-   (direction :accessor direction
-	      :initarg :direction
-	      :type v3d:vector3d)))
+;;    (direction :accessor direction
+;; 	      :initarg :direction
+;; 	      :type v3d:vector3d)))
 
-(defun make-ray (origin direction)
-  (make-instance 'ray :origin origin :direction direction))
+;; (defun make-ray (origin direction)
+;;   (make-instance 'ray :origin origin :direction direction))
 
 (defun make-triangle (file-stream)
   (let* ((verts (vector (read-vector)

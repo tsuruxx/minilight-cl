@@ -8,9 +8,9 @@
    (:file "bounding-box")
    (:file "triangle")
    (:file "scene")
-   (:file "spatial-index")
-   (:file "camera")
-   (:file "surface-point")
    (:file "image")
+   (:file "camera")
+   (:file "spatial-index")
+   (:file "surface-point")
    (:file "raytracer")))
    

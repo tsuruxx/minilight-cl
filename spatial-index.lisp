@@ -68,7 +68,7 @@
 			:maximize (aref x 3) :into d
 			:maximize (aref x 4) :into e
 			:maximize (aref x 5) :into f
-			:finally (return (make-aa-box (min eye-x a)
+			:finally (return (make-aa-bbox (min eye-x a)
 						      (min eye-y b)
 						      (min eye-z c)
 						      d e f)))))
@@ -132,7 +132,7 @@ elements respectively."
 ;; 			 list))))
 ;;       (make-octree-node bounds list 0))))
 
-(defun make-spatial-index ((bounds aa-box) (nodes vector))
+(defun make-spatial-index (bounds nodes)
   (let ((max-depth (- +max-levels+ 1)))
     (labels ((low-tolerance-p (bbox)
 	       (< (- (hx bbox) (lx bbox))
