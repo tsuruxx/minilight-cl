@@ -67,31 +67,6 @@
 			:finally (return (make-aa-box a b c d e f)))))
       (make-spatial-index new-bound items))))
 
-(defmethod make-spatial-index ((octree spatial-index) items level)
-  (with-slots (bounds nodes) octree
-    (if (is-branch-p items level)
-	(let ((q1 0))
-	  (loop for ())))
-    ))
-(defmethod make-spatial-index ((tri triangle) items level)
-  (with-slots (bound ) tri))
-
-(defun make-spatial-index (vector items)
-  (typecase vector
-    (vector3d (let ((items (....))
-		    (bounds (...))
-		    (size (....))
-		    (make-instance 'spatial-index ))))
-   (make-instance 'spatial-index )))
-
-
-;; octree node has two slots: 1. boundary vector  2. child node container
-;; (defmethod make-oct-node ((tri triangle))
-;;   )
-
-;; (defmethod make-oct-node ((node list))
-;;   (list nil (make-list 8)))
-
 (defun find-bounds (array)
   (loop for vertex across array
      for x = (aref vertex 0)
@@ -127,84 +102,55 @@ elements respectively."
   (and (every #'>= (subseq vector1 0 3) (subseq vector2 3))
        (every #'< (subseq vector1 3) (subseq vector2 0 3))))
 
-(defun subdivide (bound)
-  "Subdivides a BOUND representing an AABB into 8 AABBes"
-  (macrolet ((lxor (a b)
-	       ;; needed a logical xor :(
-	       (let ((aval (gensym))
-		     (bval (gensym)))
-		 `(let ((,aval ,a)
-			(,bval ,b))
-		    (and (or ,bval ,aval)
-			 (not (and ,bval ,aval)))))))
-    (loop :for s :below 8 :collect
-       (coerce (loop :for j :below 6
-		  :for m = (mod j 3) :collect
-		  (if (lxor (not (zerop
-				  (boole boole-and
-					 (ash s (- m)) 1)))
-			    (> j 2))
-		      (* (+ (aref bound m)
-			    (aref bound (+ m 3))) 0.5)
-		      (aref bound j)))
-	       '(vector single-float 6)))))
+;; (defun make-octree (bounds list)
+;;   (let ((max-depth (- +max-levels+ 1)))
+;;     (labels ((low-tolerance-p (bound)
+;; 	       (< (- (aref bound 3) (aref bound 0))
+;; 		   (* +tolerance+ 4.0)))
+;; 	     (bind (bound list)
+;; 	       ;; collect all items in LIST within BOUND into a new list
+;; 	       (loop :for triangle :in list
+;; 		  :if (bounded-by-p (bound triangle) bound)
+;; 		  :collect it))
+;; 	     (make-octree-node (bounds list depth)
+;; 	       ;; build octree nodes recursively
+;; 	       (list bounds
+;; 		     (if (and (< depth max-depth)
+;; 			      (> (list-length list) *max-items*)
+;; 			      (not (low-tolerance-p bounds)))
+;; 			 (loop :for sub-bound :in (subdivide bounds)
+;; 			    :collect (make-octree-node sub-bound
+;; 						       (bind sub-bound list) 
+;; 						       (+ depth 1)))
+;; 			 list))))
+;;       (make-octree-node bounds list 0))))
 
-(defun make-octree (bounds list)
+(defun make-spatial-index ((bounds aa-box) (nodes vector))
   (let ((max-depth (- +max-levels+ 1)))
-    (labels ((low-tolerance-p (bound)
-	       (< (- (aref bound 3) (aref bound 0))
-		   (* +tolerance+ 4.0)))
-	     (bind (bound list)
-	       ;; collect all items in LIST within BOUND into a new list
-	       (loop :for triangle :in list
-		  :if (bounded-by-p (bound triangle) bound)
-		  :collect it))
-	     (make-octree-node (bounds list depth)
-	       ;; build octree nodes recursively
-	       (list bounds
-		     (if (and (< depth max-depth)
-			      (> (list-length list) *max-items*)
-			      (not (low-tolerance-p bounds)))
-			 (loop :for sub-bound :in (subdivide bounds)
-			    :collect (make-octree-node sub-bound
-						       (bind sub-bound list) 
-						       (+ depth 1)))
-			 list))))
-      (make-octree-node bounds list 0))))
-
-(defmethod make-spatial-index ((bounds aa-box) (node vector))
-  (make-instance 'spatial-index :bounds bounds :nodes nodes))
-
-(defmethod make-spatial-index ((bounds aa-box) (node triangle)))
-
-(defmethod make-spatial-index ((bounds aa-box) (nodes spatial-index))
-  (let ((max-depth (- +max-levels+ 1)))
-    (labels ((low-tolerance-p (bounds)
-	       (< (- (hx bounds) (lx bounds))
+    (labels ((low-tolerance-p (bbox)
+	       (< (- (hx bbox) (lx bbox))
 		  (* +tolerance+ 4.0)))
-	     (bind (bounds vector)
-	       ;; collect all items in LIST within BOUND into a new list
-	       (coerce (loop :for item :across vector
-			  :if (bounded-by-p (bound item) bounds)
-			  :collect it)
-		       'vector))
-	     (make-spatial-node (bounds vector depth)
-	       ;; build octree nodes recursively
-	       (make-spatial-index bounds
-				   (if (and (< depth max-depth)
-					    (> (length vector) *max-items*)
-					    (not (low-tolerance-p bounds)))
-				       (loop :for sub-bound :in (subdivide bounds)
-					  :collect (make-octree-node sub-bound
-								     (bind sub-bound list) 
-								     (+ depth 1)))
-			 list))))
-      (make-spatial-node bounds list 0))))
+	     (make-node (bounds nodes depth)
+	       (if (and (< depth max-depth)
+			(> (length nodes) *max-items*)
+			(not (low-tolerance-p bounds)))
+		   (make-instance 'spatial-index
+				  :bounds bounds
+				  :node  (coerce
+					  (loop for sub-bound in (subdivide bounds)
+					     collect
+					       (make-node sub-bound
+							  (bounded-by-p nodes sub-bound)
+							  (+ depth 1)))
+					  'vector))
+		   (make-instance 'spatial-index :bounds bounds :nodes nodes))))
+      (make-node bounds nodes 0))))
+
 ;;; ------------------- Intersection -------------------------------------------
 
 
-(defun find-subcell (ray spatial-index)
-  "Find which subcell contains ray origin")
+;; (defun find-subcell (ray spatial-index)
+;;   "Find which subcell contains ray origin")
 
 ;; (defmethod intersect-p ((ray ray) (nodes list))
 ;;   (some #'(lambda (object)
@@ -289,7 +235,7 @@ elements respectively."
 ;; 	   (with-slots (bounds nodes) octree
 ;; 	     (let ((start (or start origin))
 ;; 		   hit-object
-;; 		   hit-position
+;; 		   hit-position 
 ;; 		   (item-ps (make-array (length items))))
 ;; 	       (if (spatial-index-p (first octree))
 ;; 		   (let ((midpoint (midpoint origin direction))

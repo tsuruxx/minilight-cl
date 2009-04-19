@@ -23,17 +23,38 @@
 		     :initargs :sky-emission
 		     :type v3d:vector3d)
    
-   (ground-refection :accessor ground-reflect
+   (ground-reflection :accessor ground-reflect
 		     :initargs :ground-reflect
 		     :type v3d:vector3d)))
 
-(defun make-scene (in-stream eye-position))
+(defmethod make-initialize-instance :after
+    ((scene scene) &keys mesh &allow-other-keys)
+  (with-slots (emitters spatial-index) scene
+    (setf emitters
+	  (loop :for i :below (length mesh)
+	     :while (< (length tmp) *max-emitters*)
+	     :when (and (not (vector-zerop (emitivity tri)))
+			(plusp (area tri)))
+	     :collect (let ((i-val i))
+			(lambda () (aref mesh i-val)))
+	     :into tmp
+	     :finally (return tmp)))))
 
-(defgeneric emitter (scene positon tri-id)) ;should probably be just (scene)
+(defun make-scene (in-stream eye-position)
+  (let* ((sky-emission (read-vector in-stream))
+	 (ground-reflection (read-vector in-stream))
+	 (triangles (coerce (loop :for i :below *max-triangles* :collect
+			       (make-triangle in-stream))
+			    'vector)))
+    (make-instance 'scene
+		   :sky-emission sky-emission
+		   :ground-reflect (vector* sky-emission ground-reflection)
+		   :mesh triangles
+		   :space-idx (make-spatial-index eye-position triangles))))
+
+(defgeneric emitter (scene)) ;should probably be just (scene)
 (defgeneric emitters-count (scene))
 (defgeneric default-emission (scene back-direction))
-
-
 
 (defmethod intersect-p ((ray obj) (scene scene))
   (intersect-p ray (spacial-idx scene)))
@@ -41,7 +62,7 @@
 (defmethod emitter ((scene scene))
   (let ((len (emitters-count scene)))
     (when (plusp len)
-      (let ((emitter (aref (emitters scene) (random len))))
+      (let ((emitter (funcall (aref (emitters scene) (random len)))))
 	(values (sample-point emitter) emitter)))))
 
 (defmethod emitters-count ((scene scene))
