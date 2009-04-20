@@ -51,24 +51,24 @@
    (nodes :initarg :nodes :accessor nodes)))
 
 (defun is-branch-p (items level)
-  (and (> (length items) +max-levels+)
-       (< level (- +max-levels+ 1))))
+  (and (> (length items) *max-levels*)
+       (< level (- *max-levels* 1))))
 
 
 
-(defun find-bounds (array)
-  (loop for vertex across array
-     for x = (aref vertex 0)
-     for y = (aref vertex 1)
-     for z = (aref vertex 2)
-     maximize x into max-x
-     minimize x into min-x
-     maximize y into max-y
-     minimize y into min-y
-     maximize z into max-z
-     minimize z into min-z
-     finally (return (values (list min-x min-y min-z)
-			     (list max-x max-y max-z)))))
+;; (defun find-bounds (array)
+;;   (loop for vertex across array
+;;      for x = (aref vertex 0)
+;;      for y = (aref vertex 1)
+;;      for z = (aref vertex 2)
+;;      maximize x into max-x
+;;      minimize x into min-x
+;;      maximize y into max-y
+;;      minimize y into min-y
+;;      maximize z into max-z
+;;      minimize z into min-z
+;;      finally (return (values (list min-x min-y min-z)
+;; 			     (list max-x max-y max-z)))))
 
 (defun bounds-p (test-vector bounding-vector)
   "tests whether all of TEST-VECTOR lies within BOUNDING-VECTOR
@@ -81,51 +81,43 @@ elements respectively."
        (>= (aref test-vector 5) (aref bounding-vector 2))
        (<  (aref test-vector 2) (aref bounding-vector 5))))
 
-(defun bounded-by-p (vector1 vector2)
-  (declare (type (vector single-float 6) vector1 vector2))
-  "Tests whether VECTOR1 is bounded by VECTOR2"
-  (and (every #'>= (subseq vector1 0 3) (subseq vector2 0 3))
-       (every #'<= (subseq vector1 3) (subseq vector2 3))))
+;; (defun bounded-by-p (vector1 vector2)
+;;   (declare (type (vector single-float 6) vector1 vector2))
+;;   "Tests whether VECTOR1 is bounded by VECTOR2"
+;;   (and (every #'>= (subseq vector1 0 3) (subseq vector2 0 3))
+;;        (every #'<= (subseq vector1 3) (subseq vector2 3))))
+
+(defun bounded-by-p (aabb1 aabb2)
+  (with-slots (lx ly lz hx hy hz) aabb1
+    (with-slots ((lx2 lx) (ly2 ly) (lz2 lz)
+		 (hx2 hx) (hy2 hy) (hz2 hz)) aabb2
+	(and (every #'>= (list lx ly lz) (list lx2 ly2 lz2))
+	     (every #'< (list hx hy hz) (list hx2 hy2 hz2))))))
+
+(defun find-bounded (array aabb)
+  (coerce (loop for tri across array
+	     when tri
+	     when (bounded-by-p (bounds tri) aabb)
+	     collect tri)
+	  'vector))
 
 (defun bounds-p2 (vector1 vector2)
   (and (every #'>= (subseq vector1 0 3) (subseq vector2 3))
        (every #'< (subseq vector1 3) (subseq vector2 0 3))))
 
-;; (defun make-octree (bounds list)
-;;   (let ((max-depth (- +max-levels+ 1)))
-;;     (labels ((low-tolerance-p (bound)
-;; 	       (< (- (aref bound 3) (aref bound 0))
-;; 		   (* +tolerance+ 4.0)))
-;; 	     (bind (bound list)
-;; 	       ;; collect all items in LIST within BOUND into a new list
-;; 	       (loop :for triangle :in list
-;; 		  :if (bounded-by-p (bound triangle) bound)
-;; 		  :collect it))
-;; 	     (make-octree-node (bounds list depth)
-;; 	       ;; build octree nodes recursively
-;; 	       (list bounds
-;; 		     (if (and (< depth max-depth)
-;; 			      (> (list-length list) *max-items*)
-;; 			      (not (low-tolerance-p bounds)))
-;; 			 (loop :for sub-bound :in (subdivide bounds)
-;; 			    :collect (make-octree-node sub-bound
-;; 						       (bind sub-bound list) 
-;; 						       (+ depth 1)))
-;; 			 list))))
-;;       (make-octree-node bounds list 0))))
 (defmethod make-spatial-index ((cam camera) items)
   (with-slots ((eye view-position)) cam
     (let* ((eye-x (aref eye 0))
 	   (eye-y (aref eye 1))
 	   (eye-z (aref eye 2))
 	   (new-bound (loop :for item :across items
-			:for x = (bounds item)
-			:minimize (aref x 0) :into a
-			:minimize (aref x 1) :into b
-			:minimize (aref x 2) :into c
-			:maximize (aref x 3) :into d
-			:maximize (aref x 4) :into e
-			:maximize (aref x 5) :into f
+			:for bbox = (bounds item)
+			:minimize (lx bbox) :into a
+			:minimize (ly bbox) :into b
+			:minimize (lz bbox) :into c
+			:maximize (hx bbox) :into d
+			:maximize (hy bbox) :into e
+			:maximize (hz bbox) :into f
 			:finally (return (make-aa-bbox (min eye-x a)
 						      (min eye-y b)
 						      (min eye-z c)
@@ -133,7 +125,7 @@ elements respectively."
       (make-spatial-index new-bound items))))
 
 (defmethod make-spatial-index ((bounds aa-bbox) nodes)
-  (let ((max-depth (- +max-levels+ 1)))
+  (let ((max-depth (- *max-levels* 1)))
     (labels ((low-tolerance-p (bbox)
 	       (< (- (hx bbox) (lx bbox))
 		  (* +tolerance+ 4.0)))
@@ -147,131 +139,13 @@ elements respectively."
 					  (loop for sub-bound in (subdivide bounds)
 					     collect
 					       (make-node sub-bound
-							  (bounded-by-p nodes sub-bound)
+							  (find-bounded nodes sub-bound)
 							  (+ depth 1)))
 					  'vector))
 		   (make-instance 'spatial-index :bounds bounds :nodes nodes))))
       (make-node bounds nodes 0))))
 
 ;;; ------------------- Intersection -------------------------------------------
-
-
-;; (defun find-subcell (ray spatial-index)
-;;   "Find which subcell contains ray origin")
-
-;; (defmethod intersect-p ((ray ray) (nodes list))
-;;   (some #'(lambda (object)
-;; 	    (intersect-p ray object)) nodes))
-
-;; (defmethod intersect-p ((ray ray) (node vector))
-;;   (flet ((find-subcell ()
-;; 	   (.....)))
-;;     (multiple-value-bind (hit-item hit-position)
-;; 	(intersect-p ray (find-subcell))
-;;       (values hit-item hit-position))))
-
-;; (defmethod intersect-p ((ray ray) (index spatial-index))
-;;   (labels
-;;       ((intersect-with-start (ray index last-hit start)
-;; 	 (with-slots (origin direction) ray
-;; 	   (with-slots (bound nodes) index
-;; 	     (let* ((cell-position (or start origin))
-;; 		    (start cell-position))
-;; 	       (flet ((nfind-subcell (subcell start)
-;; 			;; finds initial subcell. modifies SUBCELL
-;; 			(loop
-;; 			   :with center = (midpoint bound)
-;; 			   :for i :from 3 :downto 0
-;; 			   :do (setf subcell
-;; 				     (boole boole-ior
-;; 					    subcell (ash (if (>= (aref start i)
-;; 								 (aref center i))
-;; 							     1 0)
-;; 							 i)))
-;; 			   :finally (return subcell)))
-;; 		      (nfind-next-subcell (subcell)
-;; 			;; finds next subcell. modifies CELL-POSITION and SUBCELL
-;; 			(let ((axis 2)
-;; 			      (step (vec3)))
-;; 			  (loop :for i :from 3 :downto 0
-;; 			     :for high = (boole boole-and (ash subcell (- i)) 1)
-;; 			     :for face = (if (lxor (plusp (aref direction i))
-;; 						   high)
-;; 					     (aref bound (+ i (* high 3)))
-;; 					     (* (+ (aref bound i)
-;; 						   (aref bound (+ i 3)))
-;; 						0.5))
-;; 			     :do (setf (aref step i)
-;; 				       (/ (- face (aref origin i))
-;; 					  (aref direction i))))
-;; 			  (when (not (lxor (not (zerop (boole boole-and
-;; 							      (ash subcell (- axis)) 1)))
-;; 					   (plusp (aref direction axis))))
-;; 			    (let ((new-cell-pos (vector+ origin
-;; 							 (vector* direction
-;; 								  (aref step axis))))
-;; 				  (new-subcell (boole boole-xor
-;; 						      subcell
-;; 						      (ash 1 axis))))
-;; 			      (values new-cell-pos new-subcell)))))
-;; 		      (verify-distance ()
-;; 			(....)))
-;; 		 (let ((subcell (nfind-subcell 0 cell-position)))
-;; 		  (multiple-value-bind (hit-item hit-position)
-;; 		      (intersect-with-start ray
-;; 					    (aref nodes subcell)
-;; 					    last-hit
-;; 					    cell-position)
-;; 		    (if hit-item
-;; 			(if (floatp hit-position)
-;; 			    ;;must really be hit-distance  -- I don't understand this step.
-;; 			    (verify-distance hit-position)
-;; 			    (values hit-item hit-position))
-;; 			(intersect-with-start ray (find-next-subcell subcell)))))))))))
-;;     (intersect-with-start ray index nil nil)))
-
-;; (defun intersect-recurser (ray-origin ray-direction last-hit start)
-;;   )
-
-
-
-;; (defmethod intersect-p ((ray ray) (octree list)) ;needs to be spatial-index
-;;   (labels
-;;       ((intersect-from-start (ray octree last-hit start)
-;; 	 (with-slots (origin direction) ray
-;; 	   (with-slots (bounds nodes) octree
-;; 	     (let ((start (or start origin))
-;; 		   hit-object
-;; 		   hit-position 
-;; 		   (item-ps (make-array (length items))))
-;; 	       (if (spatial-index-p (first octree))
-;; 		   (let ((midpoint (midpoint origin direction))
-;; 			 (sub-cell (find-subcell ray octree)))
-;; 		     (multiple-value-bind (hit-object hit-position)
-;; 			 (intersect-from-start ray (aref nodes sub-cell) last-hit start)))
-;; 		   ;; else:
-;; 		   (loop
-;; 		      :with nearest-distance = most-positive-fixnum
-;; 		      :for item :across nodes
-;; 		      :do
-;; 		      (let ((distance (interect-p ray item)))
-;; 			(when (and distance (< distance nearest-distance))
-;; 			  (let ((hit (vector+ origin
-;; 					      (vector* direction distance))))
-;; 			    (flet ((within-tolerance-p (vec1 vec2)
-;; 				     (flet ((<=tolerance (x) (<= x +tolerance+)))
-;; 				       (and (every #'<=tolerance
-;; 						   (vector- (subseq vec2 0 3)))
-;; 					    (every #'<=tolerance
-;; 						   (vector- vec1 (subseq vec2 3)))))))
-;; 			      (when (within-tolerance-p hit bound)
-;; 				(setf hit-object item
-;; 				      hit-position hit
-;; 				      nearest-distance distance))))))))
-;; 	       (values hit-object hit-position))))))
-    
-;;     (intersect-from-start ray octree nil nil)))
-
 
 ;; (defmethod intersect-p ((ray slope-ray) (index spatial-index))
 ;;   ;; Intersection test between ray and octree
@@ -297,4 +171,4 @@ elements respectively."
 
 (defmethod intersect-p ((ray slope-ray) (nodes vector))
   ;; Test each node until a hit.
-  (some #'intersect-p nodes))
+  (some #'(lambda (node) (intersect-p ray node)) nodes))
