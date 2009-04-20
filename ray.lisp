@@ -119,6 +119,7 @@ http://www.cg.cs.tu-bs.de/people/eisemann/"
 		    dxdy dydx dydz dzdy dxdz dzdx
 		    cxy cxz cyx cyz czx czy classification) ray
       (case classification
+	;;; TODO: macro-ify case stanza creation.
 	(MMM (when (not (or (< ox lx) (< oy ly) (< oz lz)
 			    (plusp (+ (- (* dydx lx) hy) cxy))
 			    (plusp (+ (- (* dxdy ly) hx) cyx))
