@@ -34,44 +34,46 @@
 ;;   (make-instance 'ray :origin origin :direction direction))
 
 (defun make-triangle (file-stream)
-  (let* ((verts (vector (read-vector)
-			(read-vector)
-			(read-vector)))
-	 (r (vector-clamp (read-vector) zero-vec max-vec))
-	 (e (vector-clamp (read-vector) zero-vec max-vec)))
+  (let* ((verts (vector (read-vector file-stream)
+			(read-vector file-stream)
+			(read-vector file-stream)))
+	 (r (nvector-clamp (read-vector file-stream) (vec3-0) (vec3-max)))
+	 (e (nvector-clamp (read-vector file-stream) (vec3-0) (vec3-max))))
     
-    (make-instance 'triangle :vertices verts :reflectivity r :emitivity e)))
+    (when (and verts r e)
+      (make-instance 'triangle :vertices verts :reflectivity r :emitivity e))))
 
 
-(defgeneric bound (obj))
+;;(defgeneric bound (obj))
 (defgeneric intersect-p (object1 object2))
-(defgeneric get-sample-point (obj))
+(defgeneric sample-point (obj))
 (defgeneric normal (obj))
 (defgeneric tangent (obj))
 (defgeneric area (obj))
 
 
-(defmethod bound ((tri triangle))
-  (let ((v2 (aref (vertices tri) 2))
-	(bound (concatenate '(vector * 6) v2 v2)))
-    (loop :for j below 3
-       :for j+3 = (+ j 3)
-       :for v0 = (aref (aref vertices 0) j)
-       :for v1 = (aref (aref vertices 1) j)
-       :do (symbol-macrolet ((bound-j (aref bound j))
-			    (bound-j3 (aref bound j+3)))
-	    (if (< v0 v1)
-		(progn (when (< v0 bound-j)
-			 (setf bound-j v0))
-		       (when (> v1 bound-j3)
-			 (setf bound-j3 v1)))
-		(progn (when (< v1 bound-j)
-			 (setf bound-j v1))
-		       (when (> v0 bound-j3)
-			 (setf bound-j3 v0))))
-	    (decf bound-j (* (abs (+ bound-j 1.0)) +tolerance+))
-	    (incf bound-j3 (* (abs (+ bound-j3 1.0)) +tolerance+)))
-       finally (return bound))))
+(defmethod bounds ((tri triangle))
+  (with-slots (vertices ) tri
+   (let* ((v2 (aref vertices 2))
+	 (bound (concatenate '(vector * 6) v2 v2)))
+     (loop :for j below 3
+	:for j+3 = (+ j 3)
+	:for v0 = (aref (aref vertices 0) j)
+	:for v1 = (aref (aref vertices 1) j)
+	:do (symbol-macrolet ((bound-j (aref bound j))
+			      (bound-j3 (aref bound j+3)))
+	      (if (< v0 v1)
+		  (progn (when (< v0 bound-j)
+			   (setf bound-j v0))
+			 (when (> v1 bound-j3)
+			   (setf bound-j3 v1)))
+		  (progn (when (< v1 bound-j)
+			   (setf bound-j v1))
+			 (when (> v0 bound-j3)
+			   (setf bound-j3 v0))))
+	      (decf bound-j (* (abs (+ bound-j 1.0)) +tolerance+))
+	      (incf bound-j3 (* (abs (+ bound-j3 1.0)) +tolerance+))))
+     (vec-aa-bbox bound))))
 
 
 
@@ -86,8 +88,10 @@
 
 (defmethod intersect-p ((ray ray) (tri triangle))
   (with-slots ((verts vertices)) tri
-    (with-slots (origin (ray-dir direction)) ray
-      (let ((v0 (aref verts 0))
+    (with-slots (lx ly lz hx hy hz) ray
+      (let ((origin (vec3 lx ly lz))
+	    (ray-dir (vec3 hx hy hz))
+	    (v0 (aref verts 0))
 	    (v1 (aref verts 1))
 	    (v2 (aref verts 2))
 	    (epsilon 1.0e-6))
@@ -99,7 +103,7 @@
 		nil
 		(let* ((inverse-det (/ 1.0 det))
 		       (tvec (vector- origin v0))
-		       (u (vector-smul (dot tvec pvec) inverse-det)))
+		       (u (* (dot tvec pvec) inverse-det)))
 		  (if (or (< u 0.0) (> u 1.0))
 		      nil
 		      (let* ((qvec (cross tvec edge1))
@@ -126,21 +130,21 @@
 	  (edge0 (vector- v1 v0))
 	  (edge3 (vector- v2 v0)))
       
-      (vector-add (vector-smul edge0 a) (vector-smul edge3 b) v0))))
+      (vector+ (vector* edge0 a) (vector* edge3 b) v0))))
 
 (defmethod normal  ((tri triangle))
   (with-slots (verts vertices) tri
    (symbol-macrolet ((v1 (aref verts 1))
 		     (v2 (aref verts 2)))
      
-     (unitize (cross (tangent tri) (vector-minus v2 v1))))))
+     (nnormalize (cross (tangent tri) (vector- v2 v1))))))
 
 (defmethod tangent ((tri triangle))
   (with-slots (verts vertices) tri
    (symbol-macrolet ((v0 (aref verts 0))
 		     (v1 (aref verts 1)))
      
-     (unitize (vector-minus v0 v1)))))
+     (nnormalize (vector- v0 v1)))))
 
 (defmethod area ((tri triangle))
   (with-slots (verts vertices) tri

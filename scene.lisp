@@ -16,7 +16,7 @@
    (emitters         :accessor emitters
 	             :initargs :emitters)
    
-   (spacial-index    :accessor space-idx
+   (spatial-index    :accessor space-idx
 		     :initargs :space-idx)
    
    (sky-emission     :accessor sky-emission
@@ -31,7 +31,8 @@
     ((scene scene) &key mesh &allow-other-keys)
   (with-slots (emitters spatial-index) scene
     (setf emitters
-	  (loop :for i :below (length mesh)
+	  (loop :for i :from 0
+	     :for tri :across mesh
 	     :while (< (length tmp) *max-emitters*)
 	     :when (and (not (vector-zerop (emitivity tri)))
 			(plusp (area tri)))
@@ -43,12 +44,15 @@
 (defun make-scene (in-stream eye-position)
   (let* ((sky-emission (read-vector in-stream))
 	 (ground-reflection (read-vector in-stream))
-	 (triangles (coerce (loop :for i :below *max-triangles* :collect
-			       (make-triangle in-stream))
+	 (triangles (coerce (loop :for i :below *max-triangles* 
+			       :for tri = (make-triangle in-stream)
+			       :until (null tri) :collect tri)
 			    'vector)))
     (make-instance 'scene
-		   :sky-emission sky-emission
-		   :ground-reflect (vector* sky-emission ground-reflection)
+		   :sky-emission (nvector-clamp sky-emission (vec3-0) sky-emission)
+		   :ground-reflect (vector* sky-emission (nvector-clamp ground-reflection
+									(vec3-0)
+									(vec3 1.0 1.0 1.0)))
 		   :mesh triangles
 		   :space-idx (make-spatial-index eye-position triangles))))
 
@@ -57,7 +61,7 @@
 (defgeneric default-emission (scene back-direction))
 
 (defmethod intersect-p ((ray ray) (scene scene))
-  (intersect-p ray (spacial-idx scene)))
+  (intersect-p ray (space-idx scene)))
 
 (defmethod emitter ((scene scene))
   (let ((len (emitters-count scene)))
@@ -71,4 +75,4 @@
 (defmethod default-emission ((scene scene) back-direction)
   (if (< (aref back-direction 1) 0.0)
       (sky-emission scene)
-      (ground-reflection scene)))
+      (ground-reflect scene)))

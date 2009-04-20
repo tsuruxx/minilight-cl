@@ -1,18 +1,26 @@
 (in-package #:minilight)
 
 (defclass aa-bbox ()
-  ((lx :initarg :lx :type single-float)
-   (ly :initarg :ly :type single-float)
-   (lz :initarg :lz :type single-float)
-   (hx :initarg :hx :type single-float)
-   (hy :initarg :hy :type single-float)
-   (hz :initarg :hz :type single-float)))
+  ((lx :initarg :lx :reader lx :type single-float)
+   (ly :initarg :ly :reader ly :type single-float)
+   (lz :initarg :lz :reader lz :type single-float)
+   (hx :initarg :hx :reader hx :type single-float)
+   (hy :initarg :hy :reader hy :type single-float)
+   (hz :initarg :hz :reader hz :type single-float)))
 
 (defun make-aa-bbox (lx ly lz hx hy hz)
   (when (and (< lx hx) (< ly hy) (< lz hz))
     (make-instance 'aa-bbox
 		   :lx lx :ly ly :lz lz
 		   :hx hx :hy hy :hz hz)))
+
+(defun vec-aa-bbox (bound-vec)
+  (make-aa-bbox (aref bound-vec 0)
+		(aref bound-vec 1)
+		(aref bound-vec 2)
+		(aref bound-vec 3)
+		(aref bound-vec 4)
+		(aref bound-vec 5)))
 
 ;; (defmethod subdivide ((box aa-bbox))
 ;;   (with-slots (lx ly lz hx hy hz) box

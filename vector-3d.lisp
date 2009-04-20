@@ -36,9 +36,11 @@
 	   #:vec3-0 #:vec3 #:distance
 	   #:distance^2 #:vector+ #:vector-
 	   #:nvector+ #:nvector- #:vector* #:nvector*
+	   #:vector-zerop #:vec3-max #:vec3-min
 	   #:cross #:dot #:normalize #:nnormalize
 	   #:mag-sq #:magnitude #:unit-normal-tri #:nunit-normal-tri
-	   #:determinant #:inverse #:ninverse #:vec4-0 #:vec4))
+	   #:determinant #:inverse #:ninverse #:vec4-0 #:vec4
+	   #:clamp #:vector-clamp #:nvector-clamp))
 
 
 (in-package #:vector-3d)
@@ -79,6 +81,7 @@
   (sqrt (+ (expt (- (elt seq1 0) (elt seq2 0)) 2)
 	   (expt (- (elt seq1 1) (elt seq2 1)) 2)
 	   (expt (- (elt seq1 2) (elt seq2 2)) 2))))
+
 (defun distance^2 (seq1 seq2)
   "Return the squared distance of two 3-space vectors"
   (let ((seq3 (vector- seq1 seq2)))
@@ -112,12 +115,16 @@
 	  (+ (elt seq1 1) (elt seq2 1))
 	  (+ (elt seq1 2) (elt seq2 2))))
 
-(defun vector+ (seq1 seq2)
+(defun %vector+ (seq1 seq2)
   "Add two 3-space vectors"
   (declare (type vector3d seq1 seq2))
   (vec3 (+ (aref seq1 0) (aref seq2 0))
 	(+ (aref seq1 1) (aref seq2 1))
 	(+ (aref seq1 2) (aref seq2 2))))
+
+(defun vector+ (&rest args)
+  "Add all vectors in ARGS"
+  (reduce #'%vector+ args))
 
 (defun nvector+ (vec1 vec2)
   "Add two 3-space vectors destructively modifying the first"
@@ -338,3 +345,20 @@ vector is int the form (x y z)."
 (defun vector-zerop (vector)
   (declare (type vector vector))
   (every #'zerop vector))
+
+;; From ALEXANDRIA http://www.common-lisp.net/project/alexandria
+(declaim (inline clamp))
+(defun clamp (number min max)
+  "Clamps the NUMBER into [MIN, MAX] range. Returns MIN if NUMBER lesser then
+MIN and MAX if NUMBER is greater then MAX, otherwise returns NUMBER."
+  (if (< number min)
+      min
+      (if (> number max)
+          max
+          number)))
+
+(defun vector-clamp (vector min-vector max-vector)
+  (map 'vector #'clamp vector min-vector max-vector))
+
+(defun nvector-clamp (vector min-vector max-vector)
+  (map-into vector #'clamp vector min-vector max-vector))

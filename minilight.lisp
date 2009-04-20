@@ -60,43 +60,49 @@ with a newline. Eg.:
 ;;file reading utils
 
 (defun read-vector (stream)
-  (let ((in (read stream)))
-    (when in (coerce in 'vector))))
+  (let ((in (read stream nil 'eof)))
+    (when (not (eql in 'eof)) (coerce in 'vector))))
 
+(defun valid-minilight-file-p (stream)
+  (let ((line  (string-trim '(#\Space #\Return #\Tab #\Newline)
+			    (read-line stream))))
+    (or (string= line *model-format-id*)
+	(format t "line: ~a  but should be: ~a" line *model-format-id*))))
 
-(defun main (args)
+;; (defun read-minilight-file (path-name)
+;;   (with-open-file (in path-name)
+;;     (when (valid-minilight-file-p in)
+;;       (flet (read-triangles )))))
+
+(defun main (file-name)
   (format t *banner-message*)
-  (let* ((model-file-pathname (second args))
-	 (image-file-pathname (concatenate 'string model-file-pathname ".ppm")))
-    (let (format-id
-	  iterations 
-	  image 
-	  camera
-	  scene)
-      ;; save-image helper fn
-      (flet ((save-image (n frame-num)
-	       (with-open-file (image-file model-file-pathname :direction :output)
-		 (get-formatted image image-file (1- frame-num)))
-	       (when (not n)
-		 (format t "~%interrupted~&")
-		 (return-from main))))
-	;; open model file and read
-	(with-open-file (model-file model-path)
-	  (setf format-id (read-line model-file))
-	  (if (not (string= *model-format-id* format-id))
-	      (error "invalid model file")
-	      (setf iterations  (read-line model-file)
-		    image  (make-image model-file)
-		    camera (make-camera model-file)
-		    scene (make-scene model-file (eye-point camera)))))
-	;; render loop
-	(loop for frame-num from 1 to iterations
-	   with last-time = (get-universal-time)
-	   :do (frame camera scene image)
-	   :do (let ((new-time (get-universal-time)))
-		 (when (or (< *save-period* (- new-time last-time))
-			   (= frame-num iterations))
-		   (setf last-time new-time)
-		   (save-image t frame-num)))
-	   :do (format t "iteration: ~a" (frame-num))
-	   :finally (format t "~%finished~&"))))))
+  (let* ((model-file-pathname file-name)
+	 (image-file-pathname (concatenate 'string model-file-pathname ".lisp.ppm")))
+    ;; save-image helper fn
+    (flet ((save-image (stream image n frame-num)
+	     (write-image image stream (1- frame-num))
+	     (when (not n)
+	       (format t "~%interrupted~&")
+	       (return-from main))))
+      ;; open model file and read
+      (with-open-file (in-model model-file-pathname)
+	(with-open-file (out-image image-file-pathname :direction :output)
+	  (let ((format-id  (string-trim '(#\Newline #\Return #\Space #\Tab)
+					 (read-line in-model))))
+	    (if (not (string= *model-format-id* format-id))
+		(error "invalid model file")
+		(let* ((iterations  (read in-model))
+		       (image       (make-image in-model))
+		       (camera      (make-camera in-model))
+		       (scene       (make-scene in-model camera)))
+		  ;; render loop
+		  (loop for frame-num from 1 to iterations
+		     with last-time = (get-universal-time)
+		     :do (frame camera scene image)
+		     :do (let ((new-time (get-universal-time)))
+			   (when (or (< *save-period* (- new-time last-time))
+				     (= frame-num iterations))
+			     (setf last-time new-time)
+			     (save-image out-image image t frame-num)))
+		     :do (format t "iteration: ~a" frame-num)
+		     :finally (format t "~%finished~&"))))))))))

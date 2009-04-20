@@ -8,7 +8,7 @@
 (in-package #:minilight)
 
 (defclass camera ()
-  ((view-position :initarg view-position :reader eye-point)
+  ((view-position :initarg :view-position :reader eye-point)
    (view-angle :initarg :view-angle)
    (view-direction :initarg :view-direction)
    (right :initarg :right)
@@ -18,19 +18,19 @@
   (flet ((1/-1 (n)
 	   (if (minusp n) 1.0 -1.0)))
     (let* ((vpos (read-vector file-stream))
-	   (vdir (unitize (read-vector file-stream)))
-	   (vang (read-vector file-stream))
+	   (vdir (nnormalize (read-vector file-stream)))
+	   (vang (read file-stream))
 	   (up (vec3 0.0 1.0 0.0)))
-      (when (vec-zerop vdir)
+      (when (vector-zerop vdir)
 	(setf vdir (vec3-0)))
       (setf vang (* (min 160.0 (max 10.0 vang))
 		    (/ pi 180.0)))
-      (let ((right (unitize (cross up vdir))))
-	(if (vec-zerop right)
-	    (setf up (unitize (cross vdir right)))
+      (let ((right (nnormalize (cross up vdir))))
+	(if (vector-zerop right)
+	    (setf up (nnormalize (cross vdir right)))
 	    (progn
 	      (setf up (vec3 0.0 0.0 (1/-1 (aref vdir 1))))
-	      (setf right (unitize (cross up vdir)))))
+	      (setf right (nnormalize (cross up vdir)))))
 	(make-instance 'camera
 		       :view-position vpos :view-angle vang
 		       :view-direction vdir :right right
@@ -41,7 +41,8 @@
 (defmethod frame ((camera camera) (scene scene) (image image))
   (with-slots ((view-dir view-direction)
 	       (view-ang view-angle)
-	       (view-pos view-position)) camera
+	       (view-pos view-position)
+	       up right) camera
     (with-slots (width height) image
       ;; make raytracer
       (let ((raytracer (make-raytracer scene))
@@ -56,14 +57,15 @@
 				  (/ 2.0 height))
 			       1.0)
 		  
-		  :for offset = (vector+ (vector-s* right xf)
-					 (vector-s* up (*yf aspect)))
+		  :for offset = (vector+ (vector* right xf)
+					 (vector* up (* yf aspect)))
 		  
-		  :for sample-direction = (unitize
+		  :for sample-direction = (nnormalize
 					   (vector+ view-dir
-						    (vector-s* offset
+						    (vector* offset
 							       (tan (* view-ang 0.5)))))
-		  :for ray = (make-slope-ray view-pos sample-direction)
+		  :for ray = (apply #'make-slope-ray
+				    (concatenate 'list view-pos sample-direction))
 		  
 		  :for radiance = (radiance raytracer ray)
 
