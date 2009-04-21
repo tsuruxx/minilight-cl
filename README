@@ -1,0 +1,16 @@
+MINILIGHT-CL is my attempt to make a "common-lispy" port of the
+MiniLight Global Illumination Renderer: http://www.hxa.name/minilight/
+
+It is a mostly faithful port with regard to the original code
+base. However there are a couple of major changes:
+ 
+ * I'm experimenting with slope-rays as defined by 
+   M. Eisemann, T. Grosch, S. Müller, M. Magnor,
+   Journal of Graphic Tools, vol. 12, no. 4
+   (full link in rays.lisp). 
+   I hope a 'smarter' ray will allow for simpler index walking.
+
+ * I'm using CLOS objects to define AABBs and rays rather than
+   straight vectors like the original source.
+
+       
