@@ -88,9 +88,9 @@
 
 (defmethod intersect-p ((ray ray) (tri triangle))
   (with-slots ((verts vertices)) tri
-    (with-slots (lx ly lz hx hy hz) ray
-      (let ((origin (vec3 lx ly lz))
-	    (ray-dir (vec3 hx hy hz))
+    (with-slots (ox oy oz dx dy dz) ray
+      (let ((origin (vec3 ox oy oz))
+	    (ray-dir (vec3 dx dy dz))
 	    (v0 (aref verts 0))
 	    (v1 (aref verts 1))
 	    (v2 (aref verts 2))

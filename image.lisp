@@ -49,7 +49,8 @@
 		:do (progn
 		      (setf mapped (expt (max mapped 0.0) +gamma-encode+))
 		      (setf mapped (floor (+ (* mapped 255.0) 0.5) ))
-		      (write (min mapped 255.0) :stream file-out)))))))
+		      ;(write (min mapped 255.0) :stream file-out)
+		      (format file-out " ~a " (min mapped 255.0))))))))
 
 (defun calculate-tone-mapping (pixels divider)
   (let ((log-mean-luminance 

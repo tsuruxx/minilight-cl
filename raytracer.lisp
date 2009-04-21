@@ -16,7 +16,7 @@
 
 (defmethod radiance ((raytracer raytracer) (ray ray) &optional last-hit)
   (with-slots (scene) raytracer
-    (format t "ray=~s~%" ray)
+;;    (format t "ray=~s~%" ray)
     (with-slots (ox oy oz dx dy dz) ray
       (multiple-value-bind (hit-ref hit-position)
 	  (intersect-p ray scene)

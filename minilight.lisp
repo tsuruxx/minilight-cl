@@ -64,10 +64,9 @@ with a newline. Eg.:
     (when (not (eql in 'eof)) (coerce (mapcar 'float in) 'vector3d))))
 
 (defun valid-minilight-file-p (stream)
-  (let ((line  (string-trim '(#\Space #\Return #\Tab #\Newline)
+  (let ((line (string-trim '(#\Space #\Return #\Tab #\Newline)
 			    (read-line stream))))
-    (or (string= line *model-format-id*)
-	(format t "line: ~a  but should be: ~a" line *model-format-id*))))
+    (string= line *model-format-id*)))
 
 ;; (defun read-minilight-file (path-name)
 ;;   (with-open-file (in path-name)
@@ -86,23 +85,24 @@ with a newline. Eg.:
 	       (return-from main))))
       ;; open model file and read
       (with-open-file (in-model model-file-pathname)
-	(with-open-file (out-image image-file-pathname :direction :output)
-	  (let ((format-id  (string-trim '(#\Newline #\Return #\Space #\Tab)
-					 (read-line in-model))))
-	    (if (not (string= *model-format-id* format-id))
-		(error "invalid model file")
-		(let* ((iterations  (read in-model))
-		       (image       (make-image in-model))
-		       (camera      (make-camera in-model))
-		       (scene       (make-scene in-model camera)))
-		  ;; render loop
-		  (loop for frame-num from 1 to iterations
-		     with last-time = (get-universal-time)
-		     :do (frame camera scene image)
-		     :do (let ((new-time (get-universal-time)))
-			   (when (or (< *save-period* (- new-time last-time))
-				     (= frame-num iterations))
-			     (setf last-time new-time)
-			     (save-image out-image image t frame-num)))
-		     :do (format t "iteration: ~a" frame-num)
-		     :finally (format t "~%finished~&"))))))))))
+	(with-open-file (out-image image-file-pathname
+					;   :element-type '(unsigned-byte 8)
+				   :direction :output
+				   :if-exists :supersede)
+	  (if (not (valid-minilight-file-p in-model))
+	      (error "invalid model file")
+	      (let* ((iterations  (read in-model))
+		     (image       (make-image in-model))
+		     (camera      (make-camera in-model))
+		     (scene       (make-scene in-model camera)))
+		;; render loop
+		(loop for frame-num from 1 to iterations
+		   with last-time = (get-universal-time)
+		   :do (frame camera scene image)
+		   :do (let ((new-time (get-universal-time)))
+			 (when (or (< *save-period* (- new-time last-time))
+				   (= frame-num iterations))
+			   (setf last-time new-time)
+			   (save-image out-image image t frame-num)))
+		   :do (format t "~%iteration: ~a~&" frame-num)
+		   :finally (format t "~%finished~&")))))))))
