@@ -11,15 +11,5 @@ Common Lisp translation Copyright (c) 2009, Charlie McMackin
 
 
 
-Description
------------
-
-MiniLight is a minimal global illumination renderer. See the main MiniLight
-readme for a general description.
-
-This Common Lisp translation probably violates the spirit of translation in
-a couple of potentially major ways: I have chosen to replace the ray implementation
-with the slope ray algorithm (cited in the code) and I've decided, as a first step, to
-make things like rays and bounding boxes CLOS objects as well.
 
 
