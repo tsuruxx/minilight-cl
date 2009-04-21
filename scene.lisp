@@ -11,21 +11,21 @@
 
 (defclass scene ()
   ((mesh             :accessor mesh
-	             :initargs :mesh)
+	             :initarg :mesh)
    
    (emitters         :accessor emitters
-	             :initargs :emitters)
+	             :initarg :emitters)
    
    (spatial-index    :accessor space-idx
-		     :initargs :space-idx)
+		     :initarg :space-idx)
    
    (sky-emission     :accessor sky-emission
-		     :initargs :sky-emission
+		     :initarg :sky-emission
 		     :type v3d:vector3d)
    
    (ground-reflection :accessor ground-reflect
-		     :initargs :ground-reflect
-		     :type v3d:vector3d)))
+		      :initarg :ground-reflect
+		      :type v3d:vector3d)))
 
 (defmethod make-initialize-instance :after
     ((scene scene) &key mesh &allow-other-keys)

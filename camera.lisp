@@ -7,6 +7,7 @@
 ;;camera makes the raytracer
 (in-package #:minilight)
 
+(defparameter +pi-f+ (float pi 1f0))
 (defclass camera ()
   ((view-position :initarg :view-position :reader eye-point)
    (view-angle :initarg :view-angle)
@@ -24,9 +25,10 @@
       (when (vector-zerop vdir)
 	(setf vdir (vec3-0)))
       (setf vang (* (min 160.0 (max 10.0 vang))
-		    (/ pi 180.0)))
+		    (/ +pi-f+ 180.0)))
       (let ((right (nnormalize (cross up vdir))))
-	(if (vector-zerop right)
+	(format t "up=~s vdir=~s r=~s~%" up vdir right)
+	(if (not (vector-zerop right))
 	    (setf up (nnormalize (cross vdir right)))
 	    (progn
 	      (setf up (vec3 0.0 0.0 (1/-1 (aref vdir 1))))

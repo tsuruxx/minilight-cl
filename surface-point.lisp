@@ -35,7 +35,7 @@
 			   (not (and ,bval ,aval)))))))
       (let ((in-dot (dot in-direction (normal tri)))
 	    (out-dot (dot out-direction (normal tri))))
-	(if (truth-xor (minusp in_dot) (minusp out_dot))
+	(if (truth-xor (minusp in-dot) (minusp out-dot))
 	    (vec3-0)
 	    (vector* (vector* in-radiance (reflectivity tri))
 		     (/ (abs in-dot) pi)))))))

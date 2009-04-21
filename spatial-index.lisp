@@ -135,7 +135,7 @@ elements respectively."
 			(not (low-tolerance-p bounds)))
 		   (make-instance 'spatial-index
 				  :bounds bounds
-				  :node  (coerce
+				  :nodes  (coerce
 					  (loop for sub-bound in (subdivide bounds)
 					     collect
 					       (make-node sub-bound

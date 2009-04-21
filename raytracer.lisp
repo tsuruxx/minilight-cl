@@ -16,55 +16,58 @@
 
 (defmethod radiance ((raytracer raytracer) (ray ray) &optional last-hit)
   (with-slots (scene) raytracer
-    (with-slots (direction origin) ray
+    (format t "ray=~s~%" ray)
+    (with-slots (lx ly lz hx hy hz) ray
       (multiple-value-bind (hit-ref hit-position)
 	  (intersect-p ray scene)
-	(if hit-ref
-	    (let* ((surface-point (make-surface-point hit-ref hit-position))
-		   (local-emission (if last-hit
-				       (vec3-0)
-				       (emission surface-point
-						 origin
-						 (vector- direction)
-						 nil)))
-		   (illumination
-		    (sample-emitters raytracer ray surface-point)))
-	      (multiple-value-bind (next-direction color)
-		  (next-direction surface-point (vector- direction))
-		(let ((reflection
-		       (if (vector-zerop next-direction)
-			   (next-direction)
-			   (vector* color
-				    (radiance raytracer
-					      (apply #'make-slope-ray
-						     (concatenate 'list
-								  (^position surface-point)
-								  next-direction))
-					      (triangle-ref surface-point))))))
-		  (vector+ reflection illumination local-emission))))
-	    (default-emission scene (vector- direction)))))))
+	(let ((-direction (vec3 (- hx) (- hy) (- hz))))
+	  (if hit-ref
+	      (let* ((surface-point (make-surface-point hit-ref hit-position))
+		     (origin (vec3 lx ly lz))
+		     (local-emission (if last-hit
+					 (vec3-0)
+					 (emission surface-point
+						   origin
+						   -direction
+						   nil)))
+		     (illumination
+		      (sample-emitters raytracer ray surface-point)))
+		(multiple-value-bind (next-direction color)
+		    (next-direction surface-point -direction)
+		  (let ((reflection
+			 (if (vector-zerop next-direction)
+			     (next-direction)
+			     (vector* color
+				      (radiance raytracer
+						(apply #'make-slope-ray
+						       (concatenate 'list
+								    (^position surface-point)
+								    next-direction))
+						(triangle-ref surface-point))))))
+		    (vector+ reflection illumination local-emission))))
+	      (default-emission scene -direction)))))))
 
 (defmethod sample-emitters ((raytracer raytracer) (ray ray) surface-point)
   (with-slots (scene) raytracer
-    (with-slots (origin direction) ray
+    (with-slots (hx hy hz) ray
       (multiple-value-bind (emitter-position emitter-ref)
 	  (emitter scene)
-       (if emitter-ref
-	 (let ((emit-direction (vector- emitter-position
-					(^position surface-point))))
-	   (multiple-value-bind (hit-ref hit-pos)
-	       (intersect-p (apply #'make-slope-ray
-				   (concatenate 'list
-						(^position surface-point)
-						emit-direction))
-			    scene)
-	     (if (or (not hit-ref) (equalp emitter-ref hit-ref))
-		 (let ((emission-in (make-surface-point emitter-ref
-							emitter-position)))
-		   (reflection surface-point
-			       emit-direction
-			       (* emission-in (emitters-count scene))
-			       (vector- (direction ray))))
-		 (vec3-0)))))
-	 (vec3-0)))))
+	(if emitter-ref
+	    (let ((emit-direction (vector- emitter-position
+					   (^position surface-point))))
+	      (multiple-value-bind (hit-ref hit-pos)
+		  (intersect-p (apply #'make-slope-ray
+				      (concatenate 'list
+						   (^position surface-point)
+						   emit-direction))
+			       scene)
+		(if (or (not hit-ref) (equalp emitter-ref hit-ref))
+		    (let ((emission-in (make-surface-point emitter-ref
+							   emitter-position)))
+		      (reflection surface-point
+				  emit-direction
+				  (* emission-in (emitters-count scene))
+				  (vec3 (- hx) (- hy) (- hz))))
+		    (vec3-0)))))
+	(vec3-0)))))
 

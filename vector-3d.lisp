@@ -45,7 +45,8 @@
 
 (in-package #:vector-3d)
 
-(declaim (optimize (speed 3) (safety 0) (debug 0) (space 0)))
+#+nil(declaim (optimize (speed 3) (safety 0) (debug 0) (space 0)))
+(declaim (optimize (speed 3)))
 
 (deftype vector3d () '(simple-array single-float (3)))
 (deftype vector4d () '(simple-array single-float (4)))
@@ -270,7 +271,7 @@ vector is int the form (x y z)."
  (declare (type vector3d seq1))
  (let ((len (abs (magnitude seq1))))
    (cond ((= len 1.0) seq1)
-	 ((zerop len) #(0.0 0.0 0.0))
+	 ((zerop len) (vec3-0))
 	 (t (vector* seq1 (/ 1.0 len))))))
 
 (defun nnormalize (seq1)
@@ -278,7 +279,7 @@ vector is int the form (x y z)."
    (declare (type vector3d seq1))
    (let ((len (abs (magnitude seq1))))
      (cond ((= len 1.0) seq1)
-	   ((zerop len) #(0.0 0.0 0.0))
+	   ((zerop len) (vec3-0))
 	   (t (nvector* seq1 (/ 1.0 len))))))
 
 (defun unit-normal-tri (seq1 seq2 seq3)
