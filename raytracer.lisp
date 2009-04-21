@@ -17,13 +17,13 @@
 (defmethod radiance ((raytracer raytracer) (ray ray) &optional last-hit)
   (with-slots (scene) raytracer
     (format t "ray=~s~%" ray)
-    (with-slots (lx ly lz hx hy hz) ray
+    (with-slots (ox oy oz dx dy dz) ray
       (multiple-value-bind (hit-ref hit-position)
 	  (intersect-p ray scene)
-	(let ((-direction (vec3 (- hx) (- hy) (- hz))))
+	(let ((-direction (vec3 (- dx) (- dy) (- dz))))
 	  (if hit-ref
 	      (let* ((surface-point (make-surface-point hit-ref hit-position))
-		     (origin (vec3 lx ly lz))
+		     (origin (vec3 ox oy oz))
 		     (local-emission (if last-hit
 					 (vec3-0)
 					 (emission surface-point
@@ -49,7 +49,7 @@
 
 (defmethod sample-emitters ((raytracer raytracer) (ray ray) surface-point)
   (with-slots (scene) raytracer
-    (with-slots (hx hy hz) ray
+    (with-slots (dx dy dz) ray
       (multiple-value-bind (emitter-position emitter-ref)
 	  (emitter scene)
 	(if emitter-ref
@@ -67,7 +67,7 @@
 		      (reflection surface-point
 				  emit-direction
 				  (* emission-in (emitters-count scene))
-				  (vec3 (- hx) (- hy) (- hz))))
+				  (vec3 (- dx) (- dy) (- dz))))
 		    (vec3-0)))))
 	(vec3-0)))))
 
