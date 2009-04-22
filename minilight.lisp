@@ -11,7 +11,7 @@
   http://www.hxa7241.org/minilight/ ~&")
 
 (defvar *help-message*
-"~%----------------------------------------------------------------------
+  "~%----------------------------------------------------------------------
   MiniLight 1.5.2 Common Lisp
 
 
@@ -65,8 +65,11 @@ with a newline. Eg.:
 
 (defun valid-minilight-file-p (stream)
   (let ((line (string-trim '(#\Space #\Return #\Tab #\Newline)
-			    (read-line stream))))
+                           (read-line stream))))
     (string= line *model-format-id*)))
+
+
+
 
 ;; (defun read-minilight-file (path-name)
 ;;   (with-open-file (in path-name)
@@ -76,33 +79,33 @@ with a newline. Eg.:
 (defun main (file-name)
   (format t *banner-message*)
   (let* ((model-file-pathname file-name)
-	 (image-file-pathname (concatenate 'string model-file-pathname ".lisp.ppm")))
+         (image-file-pathname (concatenate 'string model-file-pathname ".lisp.ppm")))
     ;; save-image helper fn
     (flet ((save-image (stream image n frame-num)
-	     (write-image image stream (1- frame-num))
-	     (when (not n)
-	       (format t "~%interrupted~&")
-	       (return-from main))))
+             (write-image image stream (1- frame-num))
+             (when (not n)
+               (format t "~%interrupted~&")
+               (return-from main))))
       ;; open model file and read
       (with-open-file (in-model model-file-pathname)
-	(with-open-file (out-image image-file-pathname
-					;   :element-type '(unsigned-byte 8)
-				   :direction :output
-				   :if-exists :supersede)
-	  (if (not (valid-minilight-file-p in-model))
-	      (error "invalid model file")
-	      (let* ((iterations  (read in-model))
-		     (image       (make-image in-model))
-		     (camera      (make-camera in-model))
-		     (scene       (make-scene in-model camera)))
-		;; render loop
-		(loop for frame-num from 1 to iterations
-		   with last-time = (get-universal-time)
-		   :do (frame camera scene image)
-		   :do (let ((new-time (get-universal-time)))
-			 (when (or (< *save-period* (- new-time last-time))
-				   (= frame-num iterations))
-			   (setf last-time new-time)
-			   (save-image out-image image t frame-num)))
-		   :do (format t "~%iteration: ~a~&" frame-num)
-		   :finally (format t "~%finished~&")))))))))
+        (with-open-file (out-image image-file-pathname
+                                        ;   :element-type '(unsigned-byte 8)
+                                   :direction :output
+                                   :if-exists :supersede)
+          (if (not (valid-minilight-file-p in-model))
+              (error "invalid model file")
+              (let* ((iterations  (read in-model))
+                     (image       (make-image in-model))
+                     (camera      (make-camera in-model))
+                     (scene       (make-scene in-model camera)))
+                ;; render loop
+                (loop for frame-num from 1 to iterations
+                   with last-time = (get-universal-time)
+                   :do (frame camera scene image)
+                   :do (let ((new-time (get-universal-time)))
+                         (when (or (< *save-period* (- new-time last-time))
+                                   (= frame-num iterations))
+                           (setf last-time new-time)
+                           (save-image out-image image t frame-num)))
+                   :do (format t "~%iteration: ~a~&" frame-num)
+                   :finally (format t "~%finished~&")))))))))

@@ -32,9 +32,9 @@
 ;;                       (,bval ,b))
 ;;                   (and (or ,bval ,aval)
 ;;                        (not (and ,bval ,aval)))))))
-     
 
-        
+
+
 ;;       (loop :for s :below 8 :collect
 ;;       (apply #'make-aa-box
 ;;              (loop :for j :below 6
@@ -51,21 +51,21 @@
 (defmethod center ((box aa-bbox))
   (with-slots (lx ly lz hx hy hz) box
     (let ((mid-x (+ hx lx))
-	  (mid-y (+ hy ly))
-	  (mid-z (+ hz lz)))
+          (mid-y (+ hy ly))
+          (mid-z (+ hz lz)))
       (values (* mid-x 0.5) (* mid-y 0.5) (* mid-z 0.5)))))
 
 (defmethod subdivide ((box aa-bbox))
   (with-slots (lx ly lz hx hy hz) box
     (multiple-value-bind (cx cy cz)
-	(center box)
+        (center box)
       ;; TODO: make generation programmatic
       (list (make-aa-bbox lx ly lz cx cy cz)
-	    (make-aa-bbox cx ly lz hx cy cz)
-	    (make-aa-bbox lx cy lz cx hy cz)
-	    (make-aa-bbox cx cy lz hx hy cz)
-					    
-	    (make-aa-bbox lx ly cz cx cy hz)
-	    (make-aa-bbox cx ly cz hx cy hz)
-	    (make-aa-bbox lx cy cz cx hy hz)
-	    (make-aa-bbox cx cy cz hx hy hz)))))
+            (make-aa-bbox cx ly lz hx cy cz)
+            (make-aa-bbox lx cy lz cx hy cz)
+            (make-aa-bbox cx cy lz hx hy cz)
+            
+            (make-aa-bbox lx ly cz cx cy hz)
+            (make-aa-bbox cx ly cz hx cy hz)
+            (make-aa-bbox lx cy cz cx hy hz)
+            (make-aa-bbox cx cy cz hx hy hz)))))

@@ -68,7 +68,7 @@
 ;;      maximize z into max-z
 ;;      minimize z into min-z
 ;;      finally (return (values (list min-x min-y min-z)
-;; 			     (list max-x max-y max-z)))))
+;;                           (list max-x max-y max-z)))))
 
 (defun bounds-p (test-vector bounding-vector)
   "tests whether all of TEST-VECTOR lies within BOUNDING-VECTOR
@@ -90,16 +90,16 @@ elements respectively."
 (defun bounded-by-p (aabb1 aabb2)
   (with-slots (lx ly lz hx hy hz) aabb1
     (with-slots ((lx2 lx) (ly2 ly) (lz2 lz)
-		 (hx2 hx) (hy2 hy) (hz2 hz)) aabb2
-	(and (every #'>= (list lx ly lz) (list lx2 ly2 lz2))
-	     (every #'< (list hx hy hz) (list hx2 hy2 hz2))))))
+                 (hx2 hx) (hy2 hy) (hz2 hz)) aabb2
+      (and (every #'>= (list lx ly lz) (list lx2 ly2 lz2))
+           (every #'< (list hx hy hz) (list hx2 hy2 hz2))))))
 
 (defun find-bounded (array aabb)
   (coerce (loop for tri across array
-	     when tri
-	     when (bounded-by-p (bounds tri) aabb)
-	     collect tri)
-	  'vector))
+             when tri
+             when (bounded-by-p (bounds tri) aabb)
+             collect tri)
+          'vector))
 
 (defun bounds-p2 (vector1 vector2)
   (and (every #'>= (subseq vector1 0 3) (subseq vector2 3))
@@ -108,41 +108,41 @@ elements respectively."
 (defmethod make-spatial-index ((cam camera) items)
   (with-slots ((eye view-position)) cam
     (let* ((eye-x (aref eye 0))
-	   (eye-y (aref eye 1))
-	   (eye-z (aref eye 2))
-	   (new-bound (loop :for item :across items
-			:for bbox = (bounds item)
-			:minimize (lx bbox) :into a
-			:minimize (ly bbox) :into b
-			:minimize (lz bbox) :into c
-			:maximize (hx bbox) :into d
-			:maximize (hy bbox) :into e
-			:maximize (hz bbox) :into f
-			:finally (return (make-aa-bbox (min eye-x a)
-						      (min eye-y b)
-						      (min eye-z c)
-						      d e f)))))
+           (eye-y (aref eye 1))
+           (eye-z (aref eye 2))
+           (new-bound (loop :for item :across items
+                         :for bbox = (bounds item)
+                         :minimize (lx bbox) :into a
+                         :minimize (ly bbox) :into b
+                         :minimize (lz bbox) :into c
+                         :maximize (hx bbox) :into d
+                         :maximize (hy bbox) :into e
+                         :maximize (hz bbox) :into f
+                         :finally (return (make-aa-bbox (min eye-x a)
+                                                        (min eye-y b)
+                                                        (min eye-z c)
+                                                        d e f)))))
       (make-spatial-index new-bound items))))
 
 (defmethod make-spatial-index ((bounds aa-bbox) nodes)
   (let ((max-depth (- *max-levels* 1)))
     (labels ((low-tolerance-p (bbox)
-	       (< (- (hx bbox) (lx bbox))
-		  (* +tolerance+ 4.0)))
-	     (make-node (bounds nodes depth)
-	       (if (and (< depth max-depth)
-			(> (length nodes) *max-items*)
-			(not (low-tolerance-p bounds)))
-		   (make-instance 'spatial-index
-				  :bounds bounds
-				  :nodes  (coerce
-					  (loop for sub-bound in (subdivide bounds)
-					     collect
-					       (make-node sub-bound
-							  (find-bounded nodes sub-bound)
-							  (+ depth 1)))
-					  'vector))
-		   (make-instance 'spatial-index :bounds bounds :nodes nodes))))
+               (< (- (hx bbox) (lx bbox))
+                  (* +tolerance+ 4.0)))
+             (make-node (bounds nodes depth)
+               (if (and (< depth max-depth)
+                        (> (length nodes) *max-items*)
+                        (not (low-tolerance-p bounds)))
+                   (make-instance 'spatial-index
+                                  :bounds bounds
+                                  :nodes  (coerce
+                                           (loop for sub-bound in (subdivide bounds)
+                                              collect
+                                                (make-node sub-bound
+                                                           (find-bounded nodes sub-bound)
+                                                           (+ depth 1)))
+                                           'vector))
+                   (make-instance 'spatial-index :bounds bounds :nodes nodes))))
       (make-node bounds nodes 0))))
 
 ;;; ------------------- Intersection -------------------------------------------
@@ -153,11 +153,11 @@ elements respectively."
 ;;   (with-slots (bounds nodes) index
 ;;     (with-slots (origin direction) ray
 ;;       (let ((distance (intersect-p ray bounds)))
-;; 	(when distance
-;; 	  (let ((hit (hit-point ray distance)))
-;; 	    ;; Maybe pull this out into the triangle intersect code.
-;; 	    (when (and (in-bounds-p hit) )
-;; 	      (intersect-p ray nodes))))))))
+;;      (when distance
+;;        (let ((hit (hit-point ray distance)))
+;;          ;; Maybe pull this out into the triangle intersect code.
+;;          (when (and (in-bounds-p hit) )
+;;            (intersect-p ray nodes))))))))
 
 
 (defmethod intersect-p ((ray slope-ray) (index spatial-index))
@@ -166,7 +166,7 @@ elements respectively."
   (with-slots (bounds nodes) index
     (let ((distance (intersect-p ray bounds)))
       (when distance
-	(intersect-p ray nodes)))))
+        (intersect-p ray nodes)))))
 
 
 (defmethod intersect-p ((ray slope-ray) (nodes vector))
