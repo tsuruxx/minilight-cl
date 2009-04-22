@@ -39,7 +39,7 @@
              :collect (let ((i-val i))
                         (lambda () (aref mesh i-val)))
              :into tmp
-             :finally (return tmp)))))
+             :finally (return (coerce tmp 'vector))))))
 
 (defun make-scene (in-stream eye-position)
   (let* ((sky-emission (read-vector in-stream))
@@ -49,10 +49,12 @@
                                :until (null tri) :collect tri)
                             'vector)))
     (make-instance 'scene
+                   :emitters nil
                    :sky-emission (nvector-clamp sky-emission (vec3-0) sky-emission)
-                   :ground-reflect (vector* sky-emission (nvector-clamp ground-reflection
-                                                                        (vec3-0)
-                                                                        (vec3 1.0 1.0 1.0)))
+                   :ground-reflect (vector* sky-emission
+                                            (nvector-clamp ground-reflection
+                                                           (vec3-0)
+                                                           (vec3 1.0 1.0 1.0)))
                    :mesh triangles
                    :space-idx (make-spatial-index eye-position triangles))))
 
@@ -73,6 +75,6 @@
   (length (emitters scene)))
 
 (defmethod default-emission ((scene scene) back-direction)
-  (if (< (aref back-direction 1) 0.0)
+  (if (minusp (aref back-direction 1))
       (sky-emission scene)
       (ground-reflect scene)))

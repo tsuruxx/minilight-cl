@@ -113,7 +113,8 @@
                             (let ((hit-distance (* (dot edge2 qvec)
                                                    inverse-det)))
                               ;; values ?
-                              (values (>= hit-distance 0.0) hit-distance)))))))))))))
+                              (values (>= hit-distance 0.0) hit-distance
+                                      tri (vec3 hit-distance u v))))))))))))))
 
 
 
@@ -133,21 +134,21 @@
       (vector+ (vector* edge0 a) (vector* edge3 b) v0))))
 
 (defmethod normal  ((tri triangle))
-  (with-slots (verts vertices) tri
+  (with-slots ((verts vertices)) tri
     (symbol-macrolet ((v1 (aref verts 1))
                       (v2 (aref verts 2)))
       
       (nnormalize (cross (tangent tri) (vector- v2 v1))))))
 
 (defmethod tangent ((tri triangle))
-  (with-slots (verts vertices) tri
+  (with-slots ((verts vertices)) tri
     (symbol-macrolet ((v0 (aref verts 0))
                       (v1 (aref verts 1)))
       
       (nnormalize (vector- v0 v1)))))
 
 (defmethod area ((tri triangle))
-  (with-slots (verts vertices) tri
+  (with-slots ((verts vertices)) tri
     (symbol-macrolet ((v0 (aref verts 0))
                       (v1 (aref verts 1))
                       (v2 (aref verts 2)))

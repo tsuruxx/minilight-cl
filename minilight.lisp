@@ -4,7 +4,7 @@
 
 (in-package #:minilight)
 
-
+(declaim (optimize (debug 3) (speed 2)))
 
 (defvar *banner-message* "~%  MiniLight 1.5.2 Common Lisp
   Copyright (c) 2006-2008, Harrison Ainsworth / HXA7241 and Charles McMackin.
@@ -56,7 +56,7 @@ with a newline. Eg.:
 
 (defvar *model-format-id* "#MiniLight")
 (defvar *save-period* 180)
-
+(defparameter +pi+ (float pi 1f0))
 ;;file reading utils
 
 (defun read-vector (stream)
