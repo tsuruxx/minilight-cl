@@ -109,3 +109,32 @@ with a newline. Eg.:
                            (save-image out-image image t frame-num)))
                    :do (format t "~%iteration: ~a~&" frame-num)
                    :finally (format t "~%finished~&")))))))))
+
+(defparameter *debug* nil)
+
+(defun construct-test (file-name)
+  (let ((model-file-pathname file-name))
+    (with-open-file (in-model model-file-pathname)
+      (if (not (valid-minilight-file-p in-model))
+          (error "invalid model file")
+          (let* ((iterations  (read in-model))
+                 (image       (make-image in-model))
+                 (camera      (make-camera in-model))
+                 (scene       (make-scene in-model camera)))
+            (declare (ignore iterations image))
+            (setf *debug*  scene)
+            ;; render loop
+            #+nil
+            (loop for frame-num from 1 to iterations
+               with last-time = (get-universal-time)
+               :do (frame camera scene image)
+               :do (let ((new-time (get-universal-time)))
+                     (when (or (< *save-period* (- new-time last-time))
+                               (= frame-num iterations))
+                       (setf last-time new-time)
+                       (save-image out-image image t frame-num)))
+               :do (format t "~%iteration: ~a~&" frame-num)
+               :finally (format t "~%finished~&"))
+
+
+            )))))
