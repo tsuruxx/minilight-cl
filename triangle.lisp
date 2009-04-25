@@ -11,7 +11,7 @@
 (defclass triangle ()
   ((vertices :accessor vertices
              :initarg :vertices
-             :type v3d:vector3d) ;array of 3 verts
+             :type vector) ;array of 3 verts
    
    (reflectivity :accessor reflectivity
                  :initarg :reflectivity
@@ -45,7 +45,20 @@
 
 
 ;;(defgeneric bound (obj))
-(defgeneric intersect-p (object1 object2))
+(defgeneric intersect-p (object1 object2)
+  (:documentation
+   "Tests intersection between object1 and object2
+	RAY       -> SCENE
+		Returns: intersect-p spatial-index
+	SLOPE-RAY -> SPATIAL-INDEX
+		Returns: (values out-direction color)
+	SLOPE-RAY -> AA-BBOX
+		Returns: hit-distance or nil
+	SLOPE-RAY -> VECTOR
+		Returns: list of sorted
+	RAY       -> TRIANGLE
+		Returns: (values (>= hit-distance 0.0) hit-distance
+                                      tri (vec3 hit-distance u v))"))
 (defgeneric sample-point (obj))
 (defgeneric normal (obj))
 (defgeneric tangent (obj))
@@ -99,22 +112,21 @@
               (edge2 (vector- v2 v0)))
           (let* ((pvec (cross ray-dir edge2))
                  (det (dot edge1 pvec)))
-            (if (and (> det (- epsilon)) (< det epsilon))
-                nil
-                (let* ((inverse-det (/ 1.0 det))
-                       (tvec (vector- origin v0))
-                       (u (* (dot tvec pvec) inverse-det)))
-                  (if (or (< u 0.0) (> u 1.0))
-                      nil
-                      (let* ((qvec (cross tvec edge1))
-                             (v (* (dot ray-dir qvec) inverse-det)))
-                        (if (or (< v 0.0) (> (+ u v) 1.0))
-                            nil
-                            (let ((hit-distance (* (dot edge2 qvec)
-                                                   inverse-det)))
-                              ;; values ?
-                              (values (>= hit-distance 0.0) hit-distance
-                                      tri (vec3 hit-distance u v))))))))))))))
+            (when (not (and (> det (- epsilon)) (< det epsilon)))
+              (let* ((inverse-det (/ 1.0 det))
+                     (tvec (vector- origin v0))
+                     (u (* (dot tvec pvec) inverse-det)))
+                  (when (not (or (< u 0.0) (> u 1.0)))
+                    (let* ((qvec (cross tvec edge1))
+                           (v (* (dot ray-dir qvec) inverse-det)))
+                      (when (not (or (< v 0.0) (> (+ u v) 1.0)))
+                        (let ((hit-distance (* (dot edge2 qvec)
+                                               inverse-det)))
+                          ;; values ?
+                          (values (>= hit-distance 0.0) hit-distance
+                                  tri (vec3 hit-distance u v))))))))))))))
+
+
 
 
 
@@ -130,7 +142,6 @@
           (b (* (- 1.0 r2) sqr1))
           (edge0 (vector- v1 v0))
           (edge3 (vector- v2 v0)))
-      
       (vector+ (vector* edge0 a) (vector* edge3 b) v0))))
 
 (defmethod normal  ((tri triangle))
