@@ -21,18 +21,6 @@
               :initarg :emitivity
               :type v3d:vector3d)))
 
-;; (defclass ray ()
-;;   ((origin :accessor origin
-;;         :initarg :origin
-;;         :type v3d:vector3d)
-
-;;    (direction :accessor direction
-;;            :initarg :direction
-;;            :type v3d:vector3d)))
-
-;; (defun make-ray (origin direction)
-;;   (make-instance 'ray :origin origin :direction direction))
-
 (defun make-triangle (file-stream)
   (let* ((verts (vector (read-vector file-stream)
                         (read-vector file-stream)
@@ -45,7 +33,8 @@
 
 
 ;;(defgeneric bound (obj))
-(defgeneric intersect-p (object1 object2)
+#+nil
+(defgeneric intersect-p (object1 object2 &optional last-hit)
   (:documentation
    "Tests intersection between object1 and object2
 	RAY       -> SCENE
@@ -59,37 +48,51 @@
 	RAY       -> TRIANGLE
 		Returns: (values (>= hit-distance 0.0) hit-distance
                                       tri (vec3 hit-distance u v))"))
-(defgeneric sample-point (obj))
-(defgeneric normal (obj))
-(defgeneric tangent (obj))
-(defgeneric area (obj))
+;; (defgeneric sample-point (obj))
+;; (defgeneric normal (obj))
+;; (defgeneric tangent (obj))
+;; (defgeneric area (obj))
 
+
+(defun %bounds (vertices)
+  (let* ((v2 (aref vertices 2))
+         (bound (concatenate '(vector * 6) v2 v2)))
+    (loop
+       :for j below 3
+       :for j+3 = (+ j 3)
+       :for v0 = (aref (aref vertices 0) j)
+       :for v1 = (aref (aref vertices 1) j)
+       :do (symbol-macrolet ((bound-j (aref bound j))
+                             (bound-j3 (aref bound j+3)))
+             (if (< v0 v1)
+                 (progn (when (< v0 bound-j)
+                          (setf bound-j v0))
+                        (when (> v1 bound-j3)
+                          (setf bound-j3 v1)))
+                 (progn (when (< v1 bound-j)
+                          (setf bound-j v1))
+                        (when (> v0 bound-j3)
+                          (setf bound-j3 v0))))
+             (decf bound-j (* (abs (+ bound-j 1.0)) +tolerance+))
+             (incf bound-j3 (* (abs (+ bound-j3 1.0)) +tolerance+))))
+    (vec-aa-bbox bound)))
+
+(defun %bounds2 (vertices)
+  (loop
+     for vert across vertices
+     maximizing (aref vert 0) into max-x
+     minimizing (aref vert 0) into min-x
+     maximizing (aref vert 1) into max-y
+     minimizing (aref vert 1) into min-y
+     maximizing (aref vert 2) into max-z
+     minimizing (aref vert 2) into min-z
+     finally (progn (format t "~a ~a ~a ~a ~a ~a" min-x min-y min-z max-x max-y max-z)
+                    (return (make-aa-bbox min-x min-y min-z
+                                          max-x max-y max-z)))))
 
 (defmethod bounds ((tri triangle))
   (with-slots (vertices ) tri
-    (let* ((v2 (aref vertices 2))
-           (bound (concatenate '(vector * 6) v2 v2)))
-      (loop :for j below 3
-         :for j+3 = (+ j 3)
-         :for v0 = (aref (aref vertices 0) j)
-         :for v1 = (aref (aref vertices 1) j)
-         :do (symbol-macrolet ((bound-j (aref bound j))
-                               (bound-j3 (aref bound j+3)))
-               (if (< v0 v1)
-                   (progn (when (< v0 bound-j)
-                            (setf bound-j v0))
-                          (when (> v1 bound-j3)
-                            (setf bound-j3 v1)))
-                   (progn (when (< v1 bound-j)
-                            (setf bound-j v1))
-                          (when (> v0 bound-j3)
-                            (setf bound-j3 v0))))
-               (decf bound-j (* (abs (+ bound-j 1.0)) +tolerance+))
-               (incf bound-j3 (* (abs (+ bound-j3 1.0)) +tolerance+))))
-      (vec-aa-bbox bound))))
-
-
-
+    (%bounds vertices)))
 
 ;; @implementation
 ;; Adapted from:
@@ -99,7 +102,8 @@
 ;; http://www.acm.org/jgt/papers/MollerTrumbore97/
 ;; or http://jgt.akpeters.com/papers/MollerTrumbore97/</cite>
 
-(defmethod intersect-p ((ray ray) (tri triangle))
+(defmethod intersect-p ((ray slope-ray) (tri triangle) &optional last-hit)
+  (declare (ignore last-hit))
   (with-slots ((verts vertices)) tri
     (with-slots (ox oy oz dx dy dz) ray
       (let ((origin (vec3 ox oy oz))
@@ -123,8 +127,8 @@
                         (let ((hit-distance (* (dot edge2 qvec)
                                                inverse-det)))
                           ;; values ?
-                          (values (>= hit-distance 0.0) hit-distance
-                                  tri (vec3 hit-distance u v))))))))))))))
+                          (when (>= hit-distance 0.0)
+                            (values hit-distance tri))))))))))))))
 
 
 

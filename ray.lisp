@@ -29,7 +29,7 @@
    (cyz :initarg :cyz :type single-float)
    (czx :initarg :czx :type single-float)
    (czy :initarg :czy :type single-float)
-   (classification :initarg :classification :type symbol)))
+   (classification :initarg :classification :type symbol :reader classification)))
 
 (defun classify-ray (dx dy dz)
   (declare (single-float dx dy dz))
@@ -82,7 +82,9 @@
                    cxy cxz cyx cyz czx czy classification) ray
     (flet ((inverse (n)
              (declare (single-float n))
-             (/ 1.0 n))
+             (if (zerop n)
+                 0.0
+                 (/ 1.0 n)))
            (compute (a slope c)
              (declare (single-float a slope c))
              (- a (* slope c))))
@@ -113,7 +115,8 @@ http://www.cg.cs.tu-bs.de/people/eisemann/"
                  :ox ox :oy oy :oz oz
                  :dx dx :dy dy :dz dz))
 
-(defmethod intersect-p ((ray slope-ray) (box aa-bbox))
+(defmethod intersect-p ((ray slope-ray) (box aa-bbox) &optional last-hit)
+  (declare (ignore last-hit))
   (with-slots (lx ly lz hx hy hz) box
     (with-slots (ox oy oz idx idy idz
                     dxdy dydx dydz dzdy dxdz dzdx

@@ -14,22 +14,21 @@
 ;; (defgeneric radiance (ray))
 ;; (defgeneric sample-emitters (ray))
 
-(defmethod radiance ((raytracer raytracer) (ray ray) &optional last-hit)
+(defmethod radiance ((raytracer raytracer) (ray slope-ray) &optional (last-hit nil))
   (with-slots (scene) raytracer
-    ;;    (format t "ray=~s~%" ray)
-    (with-slots (ox oy oz idx idy idz) ray
-      (multiple-value-bind (hit-p hit-dist hit-ref hit-position)
-          (intersect-p ray scene)
-        (let ((-direction (vec3 idx idy idz)))
-          (if hit-ref
+    (with-slots (ox oy oz dx dy dz) ray
+      (multiple-value-bind (hit-dist hit-ref hit-position)
+          (intersect-p ray scene last-hit)
+        (declare (ignore hit-dist))
+        (let ((-direction (vec3 (- dx) (- dy) (- dz))))
+;;          (format t "ray=~s  hit-p=~a~%" (classification ray) hit-p)
+          (if hit-position
               (let* ((surface-point (make-surface-point hit-ref hit-position))
                      (origin (vec3 ox oy oz))
                      (local-emission (if last-hit
                                          (vec3-0)
                                          (emission surface-point
-                                                   origin
-                                                   -direction
-                                                   nil)))
+                                                   origin -direction nil)))
                      (illumination
                       (sample-emitters raytracer ray surface-point)))
                 (multiple-value-bind (next-direction color)
@@ -47,33 +46,33 @@
                     (vector+ reflection illumination local-emission))))
               (default-emission scene -direction)))))))
 
-(defmethod sample-emitters ((raytracer raytracer) (ray ray) surface-point)
+(defmethod sample-emitters ((raytracer raytracer) (ray slope-ray) surface-point)
   (with-slots (scene) raytracer
-    (with-slots (idx idy idz) ray
-      (multiple-value-bind (emitter-position emitter-ref)
-          (emitter scene)
-        (if emitter-ref
-            (let ((emit-direction
-                   (nnormalize (vector- emitter-position
-                                        (^position surface-point)))))
-              (multiple-value-bind (hit-p hit-dist hit-ref hit-pos)
-                  (intersect-p (apply #'make-slope-ray
-                                      (concatenate 'list
-                                                   (^position surface-point)
-                                                   emit-direction))
-                               scene)
-                (declare (ignore hit-pos hit-dist))
-                (if (or (not hit-p) (equalp emitter-ref hit-ref))
-                    (let ((emission-in (emission (make-surface-point emitter-ref
-                                                                     emitter-position)
-                                                 (^position surface-point)
-                                                 (vector- emit-direction)
-                                                 t))
-                          (-direction (vec3 idx idy idz)))
-                      (reflection surface-point
-                                  emit-direction
-                                  (vector* emission-in (emitters-count scene))
-                                  -direction))
-                    (vec3-0)))))
-        (vec3-0)))))
+    (with-slots (dx dy dz) ray
+      (with-slots ((surf-position position) triangle-ref) surface-point
+        (multiple-value-bind (emitter-position emitter-ref)
+            (emitter scene)
+          (let ((emitter-reflection (vec3-0)))
+            (when emitter-ref
+             (let ((emit-direction
+                    (nnormalize (vector- emitter-position surf-position))))
+               (multiple-value-bind (hit-dist hit-ref hit-pos)
+                   (let ((new-ray (apply #'make-slope-ray
+                                         (concatenate 'list
+                                                      surf-position
+                                                      emit-direction))))
+                     (intersect-p new-ray triangle-ref))
+                 (declare (ignore hit-pos))
+                 (when (or (not hit-dist) (equalp emitter-ref hit-ref))
+                   (let* ((new-spoint (make-surface-point emitter-ref
+                                                          emitter-position))
+                          (emission-in (emission new-spoint surf-position
+                                                 (vector- emit-direction)  t))
+                          (-direction (vec3 (- dx) (- dy) (- dz))))
+                     (setf emitter-reflection
+                           (reflection surface-point
+                                       emit-direction
+                                       (vector* emission-in (float (emitters-count scene)))
+                                       -direction)))))))
+            emitter-reflection))))))
 

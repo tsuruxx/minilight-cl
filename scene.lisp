@@ -27,29 +27,33 @@
                       :initarg :ground-reflect
                       :type v3d:vector3d)))
 
+(defun %find-emitters (mesh)
+  (loop
+     :for tri :across mesh
+     :while (< (length tmp) *max-emitters*)
+     :when (and (not (vector-zerop (emitivity tri)))
+                (plusp (area tri)))
+     :collect tri
+     :into tmp
+     :finally (return (coerce tmp 'vector))))
+
+#+nil
 (defmethod make-initialize-instance :after
     ((scene scene) &key mesh &allow-other-keys)
   (with-slots (emitters spatial-index) scene
-    (setf emitters
-          (loop :for i :from 0
-             :for tri :across mesh
-             :while (< (length tmp) *max-emitters*)
-             :when (and (not (vector-zerop (emitivity tri)))
-                        (plusp (area tri)))
-             :collect (let ((i-val i))
-                        (lambda () (aref mesh i-val)))
-             :into tmp
-             :finally (return (coerce tmp 'vector))))))
+    (setf emitters (%find-emitters mesh))
+    (format t "emitters: ~s~%" emitters)))
 
 (defun make-scene (in-stream eye-position)
   (let* ((sky-emission (read-vector in-stream))
          (ground-reflection (read-vector in-stream))
          (triangles (coerce (loop :for i :below *max-triangles* 
-                               :for tri = (make-triangle in-stream)
+                               :for tri =
+                               (make-triangle in-stream)
                                :until (null tri) :collect tri)
                             'vector)))
     (make-instance 'scene
-                   :emitters nil
+                   :emitters (%find-emitters triangles)
                    :sky-emission (nvector-clamp sky-emission (vec3-0) sky-emission)
                    :ground-reflect (vector* sky-emission
                                             (nvector-clamp ground-reflection
@@ -58,23 +62,26 @@
                    :mesh triangles
                    :space-idx (make-spatial-index eye-position triangles))))
 
-(defgeneric emitter (scene)) ;should probably be just (scene)
-(defgeneric emitters-count (scene))
-(defgeneric default-emission (scene back-direction))
+;; (defgeneric emitter (scene)) ;should probably be just (scene)
+;; (defgeneric emitters-count (scene))
+;; (defgeneric default-emission (scene back-direction))
 
-(defmethod intersect-p ((ray ray) (scene scene))
-  (intersect-p ray (space-idx scene)))
+(defmethod intersect-p ((ray slope-ray) (scene scene) &optional (last-hit nil))
+  (with-slots ((index spatial-index)) scene
+    (intersect-p ray index last-hit)))
 
 (defmethod emitter ((scene scene))
-  (let ((len (emitters-count scene)))
-    (when (plusp len)
-      (let ((emitter (funcall (aref (emitters scene) (random len)))))
-        (values (sample-point emitter) emitter)))))
+  (with-slots (emitters) scene
+    (let ((len (emitters-count scene)))
+      (when (plusp len)
+        (let ((emitter (aref emitters (random len))))
+          (values (sample-point emitter) emitter))))))
 
 (defmethod emitters-count ((scene scene))
   (length (emitters scene)))
 
 (defmethod default-emission ((scene scene) back-direction)
-  (if (minusp (aref back-direction 1))
-      (sky-emission scene)
-      (ground-reflect scene)))
+  (with-slots (sky-emission ground-reflection) scene
+    (if (minusp (aref back-direction 1))
+        sky-emission 
+        ground-reflection)))

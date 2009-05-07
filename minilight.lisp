@@ -6,12 +6,12 @@
 
 (declaim (optimize (debug 3) (speed 2)))
 
-(defvar *banner-message* "~%  MiniLight 1.5.2 Common Lisp
+(defvar *banner-message* "~&  MiniLight 1.5.2 Common Lisp
   Copyright (c) 2006-2008, Harrison Ainsworth / HXA7241 and Charles McMackin.
-  http://www.hxa7241.org/minilight/ ~&")
+  http://www.hxa7241.org/minilight/ ~%")
 
 (defvar *help-message*
-  "~%----------------------------------------------------------------------
+  "~&----------------------------------------------------------------------
   MiniLight 1.5.2 Common Lisp
 
 
@@ -52,7 +52,7 @@ with a newline. Eg.:
   (0 0.75 -2) (0 0 1) 45
 
   (3626 5572 5802) (0.1 0.09 0.07)
-  (0 0 0) (0 1 0) (1 1 0)  (0.7 0.7 0.7) (0 0 0)~&" )
+  (0 0 0) (0 1 0) (1 1 0)  (0.7 0.7 0.7) (0 0 0)~%" )
 
 (defvar *model-format-id* "#MiniLight")
 (defvar *save-period* 180)
@@ -76,6 +76,9 @@ with a newline. Eg.:
 ;;     (when (valid-minilight-file-p in)
 ;;       (flet (read-triangles )))))
 
+(defparameter *scene* nil)
+
+;; Write Text file. +PPM-ID+ should be P3
 (defun main (file-name)
   (format t *banner-message*)
   (let* ((model-file-pathname file-name)
@@ -89,7 +92,6 @@ with a newline. Eg.:
       ;; open model file and read
       (with-open-file (in-model model-file-pathname)
         (with-open-file (out-image image-file-pathname
-                                        ;   :element-type '(unsigned-byte 8)
                                    :direction :output
                                    :if-exists :supersede)
           (if (not (valid-minilight-file-p in-model))
@@ -98,9 +100,10 @@ with a newline. Eg.:
                      (image       (make-image in-model))
                      (camera      (make-camera in-model))
                      (scene       (make-scene in-model camera)))
+                (setf *scene* scene)
                 ;; render loop
-                (loop for frame-num from 1 to iterations
-                   with last-time = (get-universal-time)
+                (loop :for frame-num :from 1 :to iterations
+                   :with last-time = (get-universal-time)
                    :do (frame camera scene image)
                    :do (let ((new-time (get-universal-time)))
                          (when (or (< *save-period* (- new-time last-time))
@@ -110,7 +113,44 @@ with a newline. Eg.:
                    :do (format t "~%iteration: ~a~&" frame-num)
                    :finally (format t "~%finished~&")))))))))
 
-(defparameter *debug* nil)
+;; Write Binary file. +PPM-ID+ should be P6
+(defun main2 (file-name)
+  (format t *banner-message*)
+  (let* ((model-file-pathname file-name)
+         (image-file-pathname (concatenate 'string model-file-pathname ".lisp.ppm")))
+    ;; save-image helper fn
+    (flet ((save-image (file image n frame-num)
+             (write-image2 image file (1- frame-num))
+             (when (not n)
+               (format t "~%interrupted~&")
+               (return-from main2))))
+      ;; open model file and read
+      (let (iterations image camera scene)
+        (with-open-file (in-model model-file-pathname)
+          (if (not (valid-minilight-file-p in-model))
+              (error "invalid model file")
+              (progn (setf iterations  (read in-model))
+                     (setf image       (make-image in-model))
+                     (setf camera      (make-camera in-model))
+                     (setf scene       (make-scene in-model camera))
+                     (setf *scene* scene))))
+
+        ;; render loop
+        (when (and iterations image camera scene)
+          (loop
+             :for frame-num :from 1 :to iterations
+             :with last-time = (get-universal-time)
+             :do (frame camera scene image)
+             :do (let ((new-time (get-universal-time)))
+                   (when (or (< *save-period* (- new-time last-time))
+                             (= frame-num iterations))
+                     (setf last-time new-time)
+                     (save-image image-file-pathname image t frame-num)))
+             :do (format t "~%iteration: ~a~&" frame-num)
+             :finally (format t "~%finished~&")))))))
+
+
+
 
 (defun construct-test (file-name)
   (let ((model-file-pathname file-name))
@@ -125,8 +165,8 @@ with a newline. Eg.:
             (setf *debug*  scene)
             ;; render loop
             #+nil
-            (loop for frame-num from 1 to iterations
-               with last-time = (get-universal-time)
+            (loop :for frame-num :from 1 :to iterations
+               :with last-time = (get-universal-time)
                :do (frame camera scene image)
                :do (let ((new-time (get-universal-time)))
                      (when (or (< *save-period* (- new-time last-time))
@@ -134,7 +174,4 @@ with a newline. Eg.:
                        (setf last-time new-time)
                        (save-image out-image image t frame-num)))
                :do (format t "~%iteration: ~a~&" frame-num)
-               :finally (format t "~%finished~&"))
-
-
-            )))))
+               :finally (format t "~%finished~&")))))))
